@@ -154,23 +154,17 @@
       {
         "indexed": false,
         "internalType": "uint16",
-        "name": "minBps",
+        "name": "previousBps",
         "type": "uint16"
       },
       {
         "indexed": false,
         "internalType": "uint16",
-        "name": "defaultBps",
-        "type": "uint16"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint16",
-        "name": "maxBps",
+        "name": "newBps",
         "type": "uint16"
       }
     ],
-    "name": "CreatorBpsConfigUpdated",
+    "name": "CreatorBpsUpdated",
     "type": "event"
   },
   {
@@ -496,6 +490,19 @@
   },
   {
     "inputs": [],
+    "name": "MIN_CREATOR_BPS",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "MIN_SUPPLY",
     "outputs": [
       {
@@ -528,19 +535,6 @@
         "internalType": "int24",
         "name": "",
         "type": "int24"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "USE_DEFAULT_BPS",
-    "outputs": [
-      {
-        "internalType": "uint16",
-        "name": "",
-        "type": "uint16"
       }
     ],
     "stateMutability": "view",
@@ -622,11 +616,6 @@
             "type": "int24"
           },
           {
-            "internalType": "uint16",
-            "name": "creatorBps",
-            "type": "uint16"
-          },
-          {
             "internalType": "uint256",
             "name": "supply",
             "type": "uint256"
@@ -670,12 +659,12 @@
   },
   {
     "inputs": [],
-    "name": "creatorFeeManager",
+    "name": "creatorBps",
     "outputs": [
       {
-        "internalType": "address",
+        "internalType": "uint16",
         "name": "",
-        "type": "address"
+        "type": "uint16"
       }
     ],
     "stateMutability": "view",
@@ -683,12 +672,12 @@
   },
   {
     "inputs": [],
-    "name": "defaultCreatorBps",
+    "name": "creatorFeeManager",
     "outputs": [
       {
-        "internalType": "uint16",
+        "internalType": "address",
         "name": "",
-        "type": "uint16"
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -806,11 +795,6 @@
             "type": "int24"
           },
           {
-            "internalType": "uint16",
-            "name": "creatorBps",
-            "type": "uint16"
-          },
-          {
             "internalType": "uint256",
             "name": "supply",
             "type": "uint256"
@@ -911,33 +895,7 @@
   },
   {
     "inputs": [],
-    "name": "maxCreatorBps",
-    "outputs": [
-      {
-        "internalType": "uint16",
-        "name": "",
-        "type": "uint16"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
     "name": "maxWalletBps",
-    "outputs": [
-      {
-        "internalType": "uint16",
-        "name": "",
-        "type": "uint16"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "minCreatorBps",
     "outputs": [
       {
         "internalType": "uint16",
@@ -1011,21 +969,11 @@
     "inputs": [
       {
         "internalType": "uint16",
-        "name": "minBps",
-        "type": "uint16"
-      },
-      {
-        "internalType": "uint16",
-        "name": "defaultBps",
-        "type": "uint16"
-      },
-      {
-        "internalType": "uint16",
-        "name": "maxBps",
+        "name": "bps",
         "type": "uint16"
       }
     ],
-    "name": "setCreatorBpsConfig",
+    "name": "setCreatorBps",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
