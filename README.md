@@ -1,20 +1,42 @@
 # hood.dev subgraph (Goldsky)
 
-> Integration reference: `../contracts/docs/integration-spec.md` covers the
-> full contract + subgraph surface, per-page query mapping, and the deploy
-> runbook (contracts are NOT deployed yet; all data-source addresses are
-> placeholders).
+> **🟢 LIVE — indexing every hood.dev contract.** Query the **stable `prod`
+> tag**, never a pinned version:
+> ```
+> https://api.goldsky.com/api/public/project_cmg2x3lrvy37d01vq4bsnbtig/subgraphs/hooddev/prod/gn
+> ```
+> `prod` currently points at `hooddev/1.0.2`. Shipping a new version is: deploy
+> it, **wait for `Synced: 100%`**, then move the tag — no frontend change. The
+> frontend already reads this URL from `frontend/src/lib/subgraph/config.ts`.
+>
+> Integration reference: `../contracts/docs/integration-spec.md` — every
+> address, the full contract + subgraph surface, per-page query mapping, and the
+> deploy runbook (§2c is the subgraph-version runbook).
 
 Indexes hood.dev contracts on **Robinhood Chain** (Goldsky network slug:
-`robinhood-mainnet`, chain ID 4663). Covers the **HoodLocker** (locks +
-vesting), the **FeeLocker + V3FeeReceiver** (permanently locked launchpad V3
-LP + fee capture), the **HoodLauncher** (launches → `TokenLaunch`
-entities, with a per-token `HoodToken` template that keeps creator-edited
-metadata current), the **fee-policy system** (two FeePolicyManagers — token
-side + creator WETH side — with burn/vesting/staking/buy-burn modules and a
-per-pool `TokenStakingPool` template), the **TokenOwnerRegistry** (canonical
-token ownership on `TokenLaunch.owner`), and the **V1TradeManager** terminal
-(per-swap indexing).
+`robinhood-mainnet`, chain ID 4663). **ONE subgraph for the whole platform** —
+locker, launchpad and terminal share the `Token` and `User` entities, so
+deployer-side and trader-side data join directly (e.g. "which of my launched
+tokens has this trader touched, and what fees have they paid" is a single query).
+
+Covers the **HoodLocker** (token/LP locks + vesting), the **FeeLocker +
+V3FeeReceiver** (permanently locked launchpad V3 LP + fee capture), the
+**HoodLauncher** (launches → `TokenLaunch` entities, with a per-token
+`HoodToken` template that keeps creator-edited metadata current), the
+**fee-policy system** (two FeePolicyManagers — token side + creator WETH side —
+with burn/vesting/staking/buy-burn modules and a per-pool `TokenStakingPool`
+template), the **TokenOwnerRegistry** (canonical token ownership on
+`TokenLaunch.owner`), and the **V1TradeManager + TradeFeeReceiver** terminal
+(per-swap indexing, per-user volume/fees/PnL).
+
+Each data source starts at its own contract's deployment block (launchpad
+9401710, terminal 9415883, locker 9423803).
+
+> **When adding a data source for a NEW contract:** never point it at `0x0` with
+> `startBlock: 0`. The indexer would crawl from genesis and find nothing,
+> wrecking sync time for the whole subgraph. Wait until you have a real address
+> and its deployment block (`DEPLOYMENT_ID=<id> npx hardhat run
+> scripts/deploy-block.ts --network robinhood` prints both).
 
 The launchpad UI reads `TokenLaunch` for the token list/pages: metadata
 (image/description/socials/contractURI), pool + locked `position` link (fee

@@ -1,19 +1,33 @@
 specVersion: 1.0.0
-description: hood.dev on Robinhood Chain — Locker (locks + vesting), launchpad/terminal to follow
+description: hood.dev on Robinhood Chain — locker, launchpad, and trading terminal
 repository: https://hood.dev
 schema:
   file: ./schema.graphql
+#
+# ONE subgraph for the whole platform — locker, launchpad and terminal share the
+# Token and User entities, so deployer-side and trader-side data join directly.
+#
+# EVERY hood.dev contract is now deployed and indexed. Robinhood Chain mainnet
+# (chain 4663), all deployed 2026-07-14, each data source starting at its own
+# contract's deployment block:
+#   * Launchpad (ignition/modules/Launchpad.ts)  — blocks 9401710..9401921 → 9401710
+#   * Terminal  (ignition/modules/Terminal.ts)   — blocks 9415883..9415931 → 9415883
+#   * Locker    (ignition/modules/HoodLocker.ts) — block  9423803          → 9423803
+#
+# When adding a data source for a NEW contract: never point it at 0x0 with
+# startBlock 0 — the indexer would crawl from genesis and find nothing, wrecking
+# sync time for the whole subgraph. Wait until you have a real address and its
+# deployment block.
+#
 dataSources:
   - kind: ethereum
     name: HoodLocker
     # Goldsky's network slug for Robinhood Chain mainnet (chain ID 4663).
     network: robinhood-mainnet
     source:
-      # TODO: set after deploying HoodLocker (contracts/: npm run deploy:robinhood),
-      # and set startBlock to the deployment block.
-      address: "0x0000000000000000000000000000000000000000"
+      address: "0x6528F3edC098655460a6e5FF916BA6DE2e1143C3"
       abi: HoodLocker
-      startBlock: 0
+      startBlock: 9423803
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -46,11 +60,9 @@ dataSources:
     name: FeeLocker
     network: robinhood-mainnet
     source:
-      # TODO: set after deploying FeeLocker (contracts/: npm run deploy alongside
-      # the launcher), and set startBlock to the deployment block.
-      address: "0x0000000000000000000000000000000000000000"
+      address: "0xb76ec165764c28a7826F63C46592cf74491Cf41B"
       abi: FeeLocker
-      startBlock: 0
+      startBlock: 9401710
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -83,10 +95,9 @@ dataSources:
     name: V3FeeReceiver
     network: robinhood-mainnet
     source:
-      # TODO: set after deploying V3FeeReceiver, same startBlock as FeeLocker.
-      address: "0x0000000000000000000000000000000000000000"
+      address: "0x0F0F6d5FE6ddb26165391f519a23856e295E30e8"
       abi: V3FeeReceiver
-      startBlock: 0
+      startBlock: 9401710
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -117,11 +128,9 @@ dataSources:
     name: HoodLauncher
     network: robinhood-mainnet
     source:
-      # TODO: set after deploying the Launchpad Ignition module; same startBlock
-      # as FeeLocker/V3FeeReceiver (they deploy in one module).
-      address: "0x0000000000000000000000000000000000000000"
+      address: "0x77C6C3E046Bef853dd66caC6Db9e95BcD3915FCc"
       abi: HoodLauncher
-      startBlock: 0
+      startBlock: 9401710
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -149,11 +158,9 @@ dataSources:
     name: TokenFeeManager
     network: robinhood-mainnet
     source:
-      # TODO: set after deploying the Launchpad Ignition module; same startBlock
-      # as the launcher.
-      address: "0x0000000000000000000000000000000000000000"
+      address: "0xcf144fB29c3f83f800F617e2AA61ec929638ce6c"
       abi: FeePolicyManager
-      startBlock: 0
+      startBlock: 9401710
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -182,10 +189,9 @@ dataSources:
     name: CreatorFeeManager
     network: robinhood-mainnet
     source:
-      # TODO: set after deploying the Launchpad Ignition module + startBlock.
-      address: "0x0000000000000000000000000000000000000000"
+      address: "0x1A4aB101f2935ac073197084b617ad2F91ba934F"
       abi: FeePolicyManager
-      startBlock: 0
+      startBlock: 9401710
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -213,10 +219,9 @@ dataSources:
     name: TokenOwnerRegistry
     network: robinhood-mainnet
     source:
-      # TODO: set after deploying the Launchpad Ignition module + startBlock.
-      address: "0x0000000000000000000000000000000000000000"
+      address: "0x3B806bc098A388Cac346e9307476f96A6dc2a0D8"
       abi: TokenOwnerRegistry
-      startBlock: 0
+      startBlock: 9401710
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -237,10 +242,9 @@ dataSources:
     name: BuyBurnFeeModule
     network: robinhood-mainnet
     source:
-      # TODO: set after deploying the Launchpad Ignition module + startBlock.
-      address: "0x0000000000000000000000000000000000000000"
+      address: "0xB483517670C3f5be004BeeE9F0672Ad3787ea530"
       abi: BuyBurnFeeModule
-      startBlock: 0
+      startBlock: 9401710
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -263,10 +267,9 @@ dataSources:
     name: BurnFeeModule
     network: robinhood-mainnet
     source:
-      # TODO: set after deploying the Launchpad Ignition module + startBlock.
-      address: "0x0000000000000000000000000000000000000000"
+      address: "0x045423ADC749e8655e0Eb08162710b5A7C58C574"
       abi: BurnFeeModule
-      startBlock: 0
+      startBlock: 9401710
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -286,10 +289,9 @@ dataSources:
     name: VestingFeeModule
     network: robinhood-mainnet
     source:
-      # TODO: set after deploying the Launchpad Ignition module + startBlock.
-      address: "0x0000000000000000000000000000000000000000"
+      address: "0x110b7bD5305e12957dE3e03A0B3DFb7d1Fc8bad3"
       abi: VestingFeeModule
-      startBlock: 0
+      startBlock: 9401710
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -318,10 +320,9 @@ dataSources:
     name: StakingFeeModule
     network: robinhood-mainnet
     source:
-      # TODO: set after deploying the Launchpad Ignition module + startBlock.
-      address: "0x0000000000000000000000000000000000000000"
+      address: "0xe35be31390f43E8678337F5c1dB262378bD105FF"
       abi: StakingFeeModule
-      startBlock: 0
+      startBlock: 9401710
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -339,14 +340,19 @@ dataSources:
         - event: StakingPoolCreated(indexed address,indexed address,indexed address)
           handler: handleStakingPoolCreated
       file: ./src/staking-module.ts
+  # ---- Trading terminal (ignition/modules/Terminal.ts) --------------------
+  # Every trade routed through the platform emits TradeExecuted here: the raw
+  # material for trade history, per-user PnL (TraderPosition), per-user volume
+  # and fees paid (TraderStats — the cash-back base), and platform totals.
+  # Trade.dex is 0 = Uniswap V2, 1 = V3, 2 = V4; V4 needs no manifest change
+  # when live V4 pools appear on Robinhood.
   - kind: ethereum
     name: V1TradeManager
     network: robinhood-mainnet
     source:
-      # TODO: set after deploying the Terminal Ignition module + startBlock.
-      address: "0x0000000000000000000000000000000000000000"
+      address: "0x77E3df7F9f4fB0594d11913B372380e194f04378"
       abi: V1TradeManager
-      startBlock: 0
+      startBlock: 9415883
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -367,14 +373,15 @@ dataSources:
         - event: TradeExecuted(indexed address,indexed address,indexed bool,uint8,uint256,uint256,uint256)
           handler: handleTradeExecuted
       file: ./src/trade-manager.ts
+  # Cross-check on the fee side: what the receiver actually banked vs what the
+  # trade manager said it charged (TerminalStats.feesReceivedEth vs feesEth).
   - kind: ethereum
     name: TradeFeeReceiver
     network: robinhood-mainnet
     source:
-      # TODO: set after deploying the Terminal Ignition module + startBlock.
-      address: "0x0000000000000000000000000000000000000000"
+      address: "0x1F48551893237DC26e376121C1FCE24989A8C116"
       abi: TradeFeeReceiver
-      startBlock: 0
+      startBlock: 9415883
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
