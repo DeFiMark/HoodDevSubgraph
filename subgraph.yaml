@@ -1,0 +1,112 @@
+specVersion: 1.0.0
+description: hood.dev on Robinhood Chain — Locker (locks + vesting), launchpad/terminal to follow
+repository: https://hood.dev
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: HoodLocker
+    # Goldsky's network slug for Robinhood Chain mainnet (chain ID 4663).
+    network: robinhood-mainnet
+    source:
+      # TODO: set after deploying HoodLocker (contracts/: npm run deploy:robinhood),
+      # and set startBlock to the deployment block.
+      address: "0x0000000000000000000000000000000000000000"
+      abi: HoodLocker
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - LockerStats
+        - Token
+        - User
+        - TokenLock
+        - VestingSchedule
+        - VestingClaim
+      abis:
+        - name: HoodLocker
+          file: ./abis/HoodLocker.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: LockCreated(indexed uint256,indexed address,indexed address,address,uint256,uint64)
+          handler: handleLockCreated
+        - event: LockExtended(indexed uint256,uint64)
+          handler: handleLockExtended
+        - event: LockWithdrawn(indexed uint256,indexed address,uint256)
+          handler: handleLockWithdrawn
+        - event: VestingCreated(indexed uint256,indexed address,indexed address,address,uint256,uint64,uint64,uint32)
+          handler: handleVestingCreated
+        - event: VestingClaimed(indexed uint256,indexed address,uint256,uint256)
+          handler: handleVestingClaimed
+      file: ./src/locker.ts
+  - kind: ethereum
+    name: FeeLocker
+    network: robinhood-mainnet
+    source:
+      # TODO: set after deploying FeeLocker (contracts/: npm run deploy alongside
+      # the launcher), and set startBlock to the deployment block.
+      address: "0x0000000000000000000000000000000000000000"
+      abi: FeeLocker
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - FeeLockerStats
+        - LockedPosition
+        - FeeCollection
+        - Token
+        - User
+      abis:
+        - name: FeeLocker
+          file: ./abis/FeeLocker.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: PositionLocked(indexed uint256,indexed address,address,address,indexed address,uint16)
+          handler: handlePositionLocked
+        - event: FeesCollected(indexed uint256,indexed address,uint256,uint256)
+          handler: handleFeesCollected
+        - event: CreatorRecipientUpdated(indexed uint256,indexed address,indexed address)
+          handler: handleCreatorRecipientUpdated
+        - event: FeeReceiverUpdated(indexed address,indexed address)
+          handler: handleFeeReceiverUpdated
+      file: ./src/fee-locker.ts
+  # NOTE: when a new IV3FeeReceiver policy contract is installed via
+  # setFeeReceiver, add another data source block like this one for its address
+  # (or convert to a template spawned from FeeReceiverUpdated).
+  - kind: ethereum
+    name: V3FeeReceiver
+    network: robinhood-mainnet
+    source:
+      # TODO: set after deploying V3FeeReceiver, same startBlock as FeeLocker.
+      address: "0x0000000000000000000000000000000000000000"
+      abi: V3FeeReceiver
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - LockedPosition
+        - FeeDistribution
+        - ClaimableFeeBalance
+        - Token
+        - User
+      abis:
+        - name: V3FeeReceiver
+          file: ./abis/V3FeeReceiver.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: FeesDistributed(indexed uint256,indexed address,indexed address,uint256,uint256)
+          handler: handleFeesDistributed
+        - event: FeeCredited(indexed address,indexed address,uint256)
+          handler: handleFeeCredited
+        - event: FeesClaimed(indexed address,indexed address,uint256)
+          handler: handleFeesClaimed
+      file: ./src/fee-receiver.ts

@@ -1,0 +1,188 @@
+# ---------------------------------------------------------------------------
+# hood.dev subgraph — Robinhood Chain (Goldsky network: robinhood-mainnet)
+#
+# Live today: Locker (token/LP locks + vesting schedules).
+# Planned: launchpad + trading-terminal entities — see the commented section at
+# the bottom; they'll share the Token and User entities below.
+# ---------------------------------------------------------------------------
+
+"Singleton (id: \"locker\") with protocol-wide counters."
+type LockerStats @entity {
+  id: ID!
+  lockCount: Int!
+  activeLockCount: Int!
+  vestingCount: Int!
+  claimCount: Int!
+}
+
+"Any ERC-20 touched by the platform. Shared with future launchpad entities."
+type Token @entity {
+  id: Bytes! # token address
+  symbol: String!
+  name: String!
+  decimals: Int!
+  "Raw units currently held in straight locks (excludes withdrawn)."
+  totalLocked: BigInt!
+  "Raw units still unvested/unclaimed across vesting schedules."
+  totalVesting: BigInt!
+  locks: [TokenLock!]! @derivedFrom(field: "token")
+  vestings: [VestingSchedule!]! @derivedFrom(field: "token")
+}
+
+"Any address that has created or received a lock/vesting, or created a locked LP position."
+type User @entity {
+  id: Bytes! # address
+  locksOwned: [TokenLock!]! @derivedFrom(field: "owner")
+  locksWithdrawable: [TokenLock!]! @derivedFrom(field: "unlockerUser")
+  vestingsCreated: [VestingSchedule!]! @derivedFrom(field: "creator")
+  vestingsReceived: [VestingSchedule!]! @derivedFrom(field: "beneficiary")
+  lockedPositions: [LockedPosition!]! @derivedFrom(field: "creator")
+}
+
+"A straight token/LP lock. id = on-chain lock id."
+type TokenLock @entity {
+  id: ID!
+  token: Token!
+  owner: User!
+  "Sole address able to withdraw after unlock."
+  unlocker: Bytes!
+  unlockerUser: User!
+  amount: BigInt!
+  unlockTime: BigInt!
+  withdrawn: Boolean!
+  withdrawnAt: BigInt
+  extendCount: Int!
+  createdAt: BigInt!
+  createdAtBlock: BigInt!
+  createdTx: Bytes!
+}
+
+"A per-beneficiary vesting schedule. id = on-chain vesting id."
+type VestingSchedule @entity {
+  id: ID!
+  token: Token!
+  creator: User!
+  beneficiary: User!
+  total: BigInt!
+  released: BigInt!
+  start: BigInt!
+  "Seconds."
+  duration: BigInt!
+  "Seconds per release step; 0 = continuous (linear)."
+  interval: BigInt!
+  fullyClaimed: Boolean!
+  createdAt: BigInt!
+  createdAtBlock: BigInt!
+  createdTx: Bytes!
+  claims: [VestingClaim!]! @derivedFrom(field: "schedule")
+}
+
+"One claim against a vesting schedule."
+type VestingClaim @entity(immutable: true) {
+  id: Bytes! # tx hash ++ log index
+  schedule: VestingSchedule!
+  beneficiary: Bytes!
+  amount: BigInt!
+  "Cumulative released after this claim."
+  totalReleased: BigInt!
+  timestamp: BigInt!
+  tx: Bytes!
+}
+
+# ---------------------------------------------------------------------------
+# FeeLocker — permanently locked launchpad V3 LP + fee capture
+# ---------------------------------------------------------------------------
+
+"Singleton (id: \"fee-locker\") with FeeLocker-wide counters."
+type FeeLockerStats @entity {
+  id: ID!
+  positionCount: Int!
+  collectCount: Int!
+  "Current IV3FeeReceiver policy contract."
+  feeReceiver: Bytes!
+}
+
+"A permanently locked Uniswap V3 position. id = V3 position NFT id."
+type LockedPosition @entity {
+  id: ID!
+  pool: Bytes!
+  token0: Token!
+  token1: Token!
+  "Current creator-fee recipient (rotatable; bps are not)."
+  creator: User!
+  creatorBps: Int!
+  collectCount: Int!
+  "Lifetime raw fees collected from the position."
+  totalCollected0: BigInt!
+  totalCollected1: BigInt!
+  "Lifetime amounts routed to the creator / protocol by the v1 in-kind receiver."
+  creatorEarned0: BigInt!
+  creatorEarned1: BigInt!
+  protocolEarned0: BigInt!
+  protocolEarned1: BigInt!
+  createdAt: BigInt!
+  createdAtBlock: BigInt!
+  createdTx: Bytes!
+  collections: [FeeCollection!]! @derivedFrom(field: "position")
+  distributions: [FeeDistribution!]! @derivedFrom(field: "position")
+}
+
+"One collect() crank on a position (raw amounts, pre-split)."
+type FeeCollection @entity(immutable: true) {
+  id: Bytes! # tx hash ++ log index
+  position: LockedPosition!
+  amount0: BigInt!
+  amount1: BigInt!
+  "Receiver the fees were routed through."
+  receiver: Bytes!
+  timestamp: BigInt!
+  tx: Bytes!
+}
+
+"One per-token creator/protocol split performed by the V3FeeReceiver."
+type FeeDistribution @entity(immutable: true) {
+  id: Bytes! # tx hash ++ log index
+  position: LockedPosition!
+  token: Token!
+  creator: Bytes!
+  creatorAmount: BigInt!
+  protocolAmount: BigInt!
+  timestamp: BigInt!
+  tx: Bytes!
+}
+
+"Pull-fallback balance in the V3FeeReceiver (push transfer failed)."
+type ClaimableFeeBalance @entity {
+  id: Bytes! # recipient ++ token
+  recipient: Bytes!
+  token: Token!
+  amount: BigInt!
+  updatedAt: BigInt!
+}
+
+# ---------------------------------------------------------------------------
+# Planned — launchpad / trading terminal (uncomment + add data sources once the
+# terminal contracts are specced). Kept here so the schema evolves in place.
+#
+# type TokenLaunch @entity {
+#   id: Bytes!               # launch contract address or token address
+#   token: Token!
+#   creator: User!
+#   "Bonding-curve phase stats before graduation."
+#   raised: BigInt!
+#   graduated: Boolean!
+#   graduatedAt: BigInt
+#   pool: Bytes              # Uniswap pool after graduation
+#   createdAt: BigInt!
+# }
+#
+# type Swap @entity(immutable: true) {
+#   id: Bytes!
+#   token: Token!
+#   trader: User!
+#   amountIn: BigInt!
+#   amountOut: BigInt!
+#   isBuy: Boolean!
+#   timestamp: BigInt!
+# }
+# ---------------------------------------------------------------------------

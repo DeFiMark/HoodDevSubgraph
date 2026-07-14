@@ -1,0 +1,15 @@
+{
+  "name": "hooddev-subgraph",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Goldsky subgraph for hood.dev on Robinhood Chain — Locker now, launchpad/terminal next",
+  "scripts": {
+    "codegen": "graph codegen",
+    "build": "graph build",
+    "deploy:goldsky": "goldsky subgraph deploy hooddev/1.0.0 --path ."
+  },
+  "devDependencies": {
+    "@graphprotocol/graph-cli": "^0.88.0",
+    "@graphprotocol/graph-ts": "^0.35.1"
+  }
+}
