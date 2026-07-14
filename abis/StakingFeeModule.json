@@ -3,17 +3,7 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "locker_",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "protocolRecipient_",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "weth_",
+        "name": "initialOwner",
         "type": "address"
       },
       {
@@ -25,6 +15,16 @@
         "internalType": "address",
         "name": "creatorFeeManager_",
         "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "weth_",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "poolImplementation_",
+        "type": "address"
       }
     ],
     "stateMutability": "nonpayable",
@@ -32,33 +32,55 @@
   },
   {
     "inputs": [],
-    "name": "NothingToClaim",
+    "name": "FailedDeployment",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "balance",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "needed",
+        "type": "uint256"
+      }
+    ],
+    "name": "InsufficientBalance",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "OnlyLocker",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "OnlyProtocolRecipient",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "ReentrancyGuardReentrantCall",
+    "name": "OnlyManager",
     "type": "error"
   },
   {
     "inputs": [
       {
         "internalType": "address",
-        "name": "token",
+        "name": "owner",
         "type": "address"
       }
     ],
-    "name": "SafeERC20FailedOperation",
+    "name": "OwnableInvalidOwner",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "OwnableUnauthorizedAccount",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "PoolNotFound",
     "type": "error"
   },
   {
@@ -72,23 +94,17 @@
       {
         "indexed": true,
         "internalType": "address",
-        "name": "recipient",
+        "name": "previousOwner",
         "type": "address"
       },
       {
         "indexed": true,
         "internalType": "address",
-        "name": "token",
+        "name": "newOwner",
         "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
       }
     ],
-    "name": "FeeCredited",
+    "name": "OwnershipTransferStarted",
     "type": "event"
   },
   {
@@ -97,23 +113,17 @@
       {
         "indexed": true,
         "internalType": "address",
-        "name": "recipient",
+        "name": "previousOwner",
         "type": "address"
       },
       {
         "indexed": true,
         "internalType": "address",
-        "name": "token",
+        "name": "newOwner",
         "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
       }
     ],
-    "name": "FeesClaimed",
+    "name": "OwnershipTransferred",
     "type": "event"
   },
   {
@@ -121,9 +131,34 @@
     "inputs": [
       {
         "indexed": true,
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
+        "internalType": "address",
+        "name": "previousImplementation",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newImplementation",
+        "type": "address"
+      }
+    ],
+    "name": "PoolImplementationUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "pool",
+        "type": "address"
       },
       {
         "indexed": true,
@@ -132,30 +167,18 @@
         "type": "address"
       },
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "manager",
-        "type": "address"
-      },
-      {
         "indexed": false,
         "internalType": "uint256",
         "name": "amount",
         "type": "uint256"
       }
     ],
-    "name": "FeesDelegated",
+    "name": "RewardNotified",
     "type": "event"
   },
   {
     "anonymous": false,
     "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
       {
         "indexed": true,
         "internalType": "address",
@@ -165,92 +188,24 @@
       {
         "indexed": true,
         "internalType": "address",
-        "name": "creator",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "creatorAmount",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "protocolAmount",
-        "type": "uint256"
-      }
-    ],
-    "name": "FeesDistributed",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "previousRecipient",
+        "name": "pool",
         "type": "address"
       },
       {
         "indexed": true,
         "internalType": "address",
-        "name": "newRecipient",
+        "name": "implementation",
         "type": "address"
       }
     ],
-    "name": "ProtocolRecipientUpdated",
+    "name": "StakingPoolCreated",
     "type": "event"
   },
   {
     "inputs": [],
-    "name": "MAX_BPS",
-    "outputs": [
-      {
-        "internalType": "uint16",
-        "name": "",
-        "type": "uint16"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "token",
-        "type": "address"
-      }
-    ],
-    "name": "claim",
+    "name": "acceptOwnership",
     "outputs": [],
     "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "recipient",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "token",
-        "type": "address"
-      }
-    ],
-    "name": "claimable",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -258,7 +213,67 @@
     "name": "creatorFeeManager",
     "outputs": [
       {
-        "internalType": "contract IFeePolicyManager",
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "onFees",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      },
+      {
+        "internalType": "bytes",
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "name": "onRegister",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "owner",
+    "outputs": [
+      {
+        "internalType": "address",
         "name": "",
         "type": "address"
       }
@@ -268,7 +283,20 @@
   },
   {
     "inputs": [],
-    "name": "locker",
+    "name": "pendingOwner",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "poolImplementation",
     "outputs": [
       {
         "internalType": "address",
@@ -282,57 +310,40 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
         "internalType": "address",
-        "name": "token0",
+        "name": "token",
         "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "token1",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount0",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount1",
-        "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "creator",
-        "type": "address"
-      },
-      {
-        "internalType": "uint16",
-        "name": "creatorBps",
-        "type": "uint16"
       }
     ],
-    "name": "onFeesCollected",
+    "name": "poolOf",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "pool",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "renounceOwnership",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "protocolRecipient",
-    "outputs": [
+    "inputs": [
       {
         "internalType": "address",
-        "name": "",
+        "name": "implementation",
         "type": "address"
       }
     ],
-    "stateMutability": "view",
+    "name": "setPoolImplementation",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -340,7 +351,7 @@
     "name": "tokenFeeManager",
     "outputs": [
       {
-        "internalType": "contract IFeePolicyManager",
+        "internalType": "address",
         "name": "",
         "type": "address"
       }
@@ -352,11 +363,11 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "newRecipient",
+        "name": "newOwner",
         "type": "address"
       }
     ],
-    "name": "updateProtocolRecipient",
+    "name": "transferOwnership",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

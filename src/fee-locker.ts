@@ -39,6 +39,8 @@ export function handlePositionLocked(event: PositionLocked): void {
   position.creatorEarned1 = BigInt.zero()
   position.protocolEarned0 = BigInt.zero()
   position.protocolEarned1 = BigInt.zero()
+  position.delegatedEarned0 = BigInt.zero()
+  position.delegatedEarned1 = BigInt.zero()
   position.createdAt = event.block.timestamp
   position.createdAtBlock = event.block.number
   position.createdTx = event.transaction.hash

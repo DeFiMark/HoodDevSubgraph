@@ -3,7 +3,7 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "npm_",
+        "name": "initialOwner",
         "type": "address"
       },
       {
@@ -13,17 +13,7 @@
       },
       {
         "internalType": "address",
-        "name": "initialOwner",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "weth_",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "ownerRegistry_",
+        "name": "feeAsset_",
         "type": "address"
       }
     ],
@@ -32,27 +22,22 @@
   },
   {
     "inputs": [],
-    "name": "InvalidBps",
+    "name": "InvalidPolicyId",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "NotLocked",
+    "name": "InvalidVenue",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NoPolicy",
     "type": "error"
   },
   {
     "inputs": [],
     "name": "OnlyLauncher",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "OnlyPositionManager",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "OnlyTokenOwner",
     "type": "error"
   },
   {
@@ -79,12 +64,7 @@
   },
   {
     "inputs": [],
-    "name": "RangeNotExtreme",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "ReceiverNotSet",
+    "name": "PolicyAlreadySet",
     "type": "error"
   },
   {
@@ -104,8 +84,24 @@
     "type": "error"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "policyId",
+        "type": "uint16"
+      }
+    ],
+    "name": "UnknownPolicy",
+    "type": "error"
+  },
+  {
     "inputs": [],
     "name": "ZeroAddress",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ZeroAmount",
     "type": "error"
   },
   {
@@ -113,24 +109,18 @@
     "inputs": [
       {
         "indexed": true,
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "indexed": true,
         "internalType": "address",
-        "name": "previousCreator",
+        "name": "previousLauncher",
         "type": "address"
       },
       {
         "indexed": true,
         "internalType": "address",
-        "name": "newCreator",
+        "name": "newLauncher",
         "type": "address"
       }
     ],
-    "name": "CreatorRecipientUpdated",
+    "name": "LauncherUpdated",
     "type": "event"
   },
   {
@@ -138,49 +128,24 @@
     "inputs": [
       {
         "indexed": true,
+        "internalType": "uint16",
+        "name": "policyId",
+        "type": "uint16"
+      },
+      {
+        "indexed": true,
         "internalType": "address",
-        "name": "previousReceiver",
+        "name": "previousModule",
         "type": "address"
       },
       {
         "indexed": true,
         "internalType": "address",
-        "name": "newReceiver",
+        "name": "newModule",
         "type": "address"
       }
     ],
-    "name": "FeeReceiverUpdated",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "receiver",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount0",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount1",
-        "type": "uint256"
-      }
-    ],
-    "name": "FeesCollected",
+    "name": "ModuleSet",
     "type": "event"
   },
   {
@@ -226,56 +191,68 @@
     "inputs": [
       {
         "indexed": true,
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "module",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "venue",
+        "type": "address"
+      },
+      {
+        "indexed": false,
         "internalType": "uint256",
-        "name": "tokenId",
+        "name": "amount",
         "type": "uint256"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "pool",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "token0",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "token1",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "creator",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint16",
-        "name": "creatorBps",
-        "type": "uint16"
       }
     ],
-    "name": "PositionLocked",
+    "name": "TokenFeesHandled",
     "type": "event"
   },
   {
-    "inputs": [],
-    "name": "MAX_BPS",
-    "outputs": [
+    "anonymous": false,
+    "inputs": [
       {
+        "indexed": true,
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "indexed": true,
         "internalType": "uint16",
-        "name": "",
+        "name": "policyId",
         "type": "uint16"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "module",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "venue",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes",
+        "name": "data",
+        "type": "bytes"
       }
     ],
-    "stateMutability": "view",
-    "type": "function"
+    "name": "TokenPolicySet",
+    "type": "event"
   },
   {
     "inputs": [],
@@ -285,38 +262,68 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "collect",
+    "inputs": [],
+    "name": "feeAsset",
     "outputs": [
       {
-        "internalType": "uint256",
-        "name": "amount0",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount1",
-        "type": "uint256"
+        "internalType": "address",
+        "name": "",
+        "type": "address"
       }
     ],
-    "stateMutability": "nonpayable",
+    "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [
       {
-        "internalType": "uint256[]",
-        "name": "tokenIds",
-        "type": "uint256[]"
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
       }
     ],
-    "name": "collectMany",
+    "name": "getPolicy",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint16",
+            "name": "policyId",
+            "type": "uint16"
+          },
+          {
+            "internalType": "address",
+            "name": "module",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "venue",
+            "type": "address"
+          }
+        ],
+        "internalType": "struct FeePolicyManager.TokenPolicy",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "handleFee",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -324,99 +331,17 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "configs",
-    "outputs": [
-      {
         "internalType": "address",
-        "name": "creator",
-        "type": "address"
-      },
-      {
-        "internalType": "uint16",
-        "name": "creatorBps",
-        "type": "uint16"
-      },
-      {
-        "internalType": "address",
-        "name": "token0",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "token1",
+        "name": "token",
         "type": "address"
       }
     ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "factory",
+    "name": "hasPolicy",
     "outputs": [
       {
-        "internalType": "contract IUniswapV3Factory",
+        "internalType": "bool",
         "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "feeReceiver",
-    "outputs": [
-      {
-        "internalType": "contract IV3FeeReceiver",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "getConfig",
-    "outputs": [
-      {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "creator",
-            "type": "address"
-          },
-          {
-            "internalType": "uint16",
-            "name": "creatorBps",
-            "type": "uint16"
-          },
-          {
-            "internalType": "address",
-            "name": "token0",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "token1",
-            "type": "address"
-          }
-        ],
-        "internalType": "struct FeeLocker.PositionConfig",
-        "name": "",
-        "type": "tuple"
+        "type": "bool"
       }
     ],
     "stateMutability": "view",
@@ -436,11 +361,17 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "npm",
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "moduleOf",
     "outputs": [
       {
-        "internalType": "contract INonfungiblePositionManager",
+        "internalType": "address",
         "name": "",
         "type": "address"
       }
@@ -451,32 +382,46 @@
   {
     "inputs": [
       {
+        "internalType": "uint16",
+        "name": "policyId",
+        "type": "uint16"
+      }
+    ],
+    "name": "modules",
+    "outputs": [
+      {
         "internalType": "address",
-        "name": "operator",
+        "name": "module",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
         "type": "address"
       },
       {
         "internalType": "address",
-        "name": "from",
+        "name": "creator",
         "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
       },
       {
         "internalType": "bytes",
-        "name": "data",
+        "name": "config",
         "type": "bytes"
       }
     ],
-    "name": "onERC721Received",
+    "name": "onTokenLaunched",
     "outputs": [
       {
-        "internalType": "bytes4",
-        "name": "",
-        "type": "bytes4"
+        "internalType": "address",
+        "name": "feeVenue",
+        "type": "address"
       }
     ],
     "stateMutability": "nonpayable",
@@ -488,19 +433,6 @@
     "outputs": [
       {
         "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "ownerRegistry",
-    "outputs": [
-      {
-        "internalType": "contract ITokenOwnerRegistry",
         "name": "",
         "type": "address"
       }
@@ -522,6 +454,35 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "policies",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "policyId",
+        "type": "uint16"
+      },
+      {
+        "internalType": "address",
+        "name": "module",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "venue",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "renounceOwnership",
     "outputs": [],
@@ -532,11 +493,29 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "receiver",
+        "name": "launcher_",
         "type": "address"
       }
     ],
-    "name": "setFeeReceiver",
+    "name": "setLauncher",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "policyId",
+        "type": "uint16"
+      },
+      {
+        "internalType": "address",
+        "name": "module",
+        "type": "address"
+      }
+    ],
+    "name": "setModule",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -552,37 +531,6 @@
     "name": "transferOwnership",
     "outputs": [],
     "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "newCreator",
-        "type": "address"
-      }
-    ],
-    "name": "updateCreatorRecipient",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "weth",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
     "type": "function"
   }
 ]

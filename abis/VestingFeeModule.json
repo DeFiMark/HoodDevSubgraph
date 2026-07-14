@@ -3,32 +3,38 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "locker_",
+        "name": "manager_",
         "type": "address"
       },
       {
         "internalType": "address",
-        "name": "protocolRecipient_",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "weth_",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "tokenFeeManager_",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "creatorFeeManager_",
+        "name": "ownerRegistry_",
         "type": "address"
       }
     ],
     "stateMutability": "nonpayable",
     "type": "constructor"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint64",
+        "name": "nextClaimAt",
+        "type": "uint64"
+      }
+    ],
+    "name": "ClaimNotReady",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidReleaseBps",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NotRegistered",
+    "type": "error"
   },
   {
     "inputs": [],
@@ -37,12 +43,12 @@
   },
   {
     "inputs": [],
-    "name": "OnlyLocker",
+    "name": "OnlyManager",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "OnlyProtocolRecipient",
+    "name": "OnlyTokenOwner",
     "type": "error"
   },
   {
@@ -72,12 +78,6 @@
       {
         "indexed": true,
         "internalType": "address",
-        "name": "recipient",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
         "name": "token",
         "type": "address"
       },
@@ -86,20 +86,20 @@
         "internalType": "uint256",
         "name": "amount",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "accrued",
+        "type": "uint256"
       }
     ],
-    "name": "FeeCredited",
+    "name": "VestingFeesAccrued",
     "type": "event"
   },
   {
     "anonymous": false,
     "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "recipient",
-        "type": "address"
-      },
       {
         "indexed": true,
         "internalType": "address",
@@ -107,34 +107,9 @@
         "type": "address"
       },
       {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "FeesClaimed",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
         "indexed": true,
         "internalType": "address",
-        "name": "asset",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "manager",
+        "name": "recipient",
         "type": "address"
       },
       {
@@ -142,20 +117,20 @@
         "internalType": "uint256",
         "name": "amount",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "accrued",
+        "type": "uint256"
       }
     ],
-    "name": "FeesDelegated",
+    "name": "VestingFeesClaimed",
     "type": "event"
   },
   {
     "anonymous": false,
     "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
       {
         "indexed": true,
         "internalType": "address",
@@ -169,24 +144,30 @@
         "type": "address"
       },
       {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "creatorAmount",
-        "type": "uint256"
+        "indexed": true,
+        "internalType": "address",
+        "name": "recipient",
+        "type": "address"
       },
       {
         "indexed": false,
-        "internalType": "uint256",
-        "name": "protocolAmount",
-        "type": "uint256"
+        "internalType": "uint16",
+        "name": "dailyReleaseBps",
+        "type": "uint16"
       }
     ],
-    "name": "FeesDistributed",
+    "name": "VestingPolicyRegistered",
     "type": "event"
   },
   {
     "anonymous": false,
     "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
       {
         "indexed": true,
         "internalType": "address",
@@ -200,8 +181,21 @@
         "type": "address"
       }
     ],
-    "name": "ProtocolRecipientUpdated",
+    "name": "VestingRecipientUpdated",
     "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "CLAIM_INTERVAL",
+    "outputs": [
+      {
+        "internalType": "uint64",
+        "name": "",
+        "type": "uint64"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
   },
   {
     "inputs": [],
@@ -225,17 +219,18 @@
       }
     ],
     "name": "claim",
-    "outputs": [],
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
     "inputs": [
-      {
-        "internalType": "address",
-        "name": "recipient",
-        "type": "address"
-      },
       {
         "internalType": "address",
         "name": "token",
@@ -246,29 +241,67 @@
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "amount",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint64",
+        "name": "nextClaimAt",
+        "type": "uint64"
       }
     ],
     "stateMutability": "view",
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "creatorFeeManager",
-    "outputs": [
+    "inputs": [
       {
-        "internalType": "contract IFeePolicyManager",
-        "name": "",
+        "internalType": "address",
+        "name": "token",
         "type": "address"
       }
     ],
+    "name": "getVesting",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "recipient",
+            "type": "address"
+          },
+          {
+            "internalType": "uint16",
+            "name": "dailyReleaseBps",
+            "type": "uint16"
+          },
+          {
+            "internalType": "uint64",
+            "name": "lastClaimAt",
+            "type": "uint64"
+          },
+          {
+            "internalType": "uint256",
+            "name": "accrued",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "released",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct VestingFeeModule.FeeVesting",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
-    "name": "locker",
+    "name": "manager",
     "outputs": [
       {
         "internalType": "address",
@@ -282,29 +315,27 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
         "internalType": "address",
-        "name": "token0",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "token1",
+        "name": "token",
         "type": "address"
       },
       {
         "internalType": "uint256",
-        "name": "amount0",
+        "name": "amount",
         "type": "uint256"
-      },
+      }
+    ],
+    "name": "onFees",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
       {
-        "internalType": "uint256",
-        "name": "amount1",
-        "type": "uint256"
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
       },
       {
         "internalType": "address",
@@ -312,19 +343,12 @@
         "type": "address"
       },
       {
-        "internalType": "uint16",
-        "name": "creatorBps",
-        "type": "uint16"
+        "internalType": "bytes",
+        "name": "data",
+        "type": "bytes"
       }
     ],
-    "name": "onFeesCollected",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "protocolRecipient",
+    "name": "onRegister",
     "outputs": [
       {
         "internalType": "address",
@@ -332,15 +356,15 @@
         "type": "address"
       }
     ],
-    "stateMutability": "view",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
     "inputs": [],
-    "name": "tokenFeeManager",
+    "name": "ownerRegistry",
     "outputs": [
       {
-        "internalType": "contract IFeePolicyManager",
+        "internalType": "contract ITokenOwnerRegistry",
         "name": "",
         "type": "address"
       }
@@ -352,23 +376,54 @@
     "inputs": [
       {
         "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
         "name": "newRecipient",
         "type": "address"
       }
     ],
-    "name": "updateProtocolRecipient",
+    "name": "setRecipient",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "weth",
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "vestings",
     "outputs": [
       {
         "internalType": "address",
-        "name": "",
+        "name": "recipient",
         "type": "address"
+      },
+      {
+        "internalType": "uint16",
+        "name": "dailyReleaseBps",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint64",
+        "name": "lastClaimAt",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint256",
+        "name": "accrued",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "released",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",

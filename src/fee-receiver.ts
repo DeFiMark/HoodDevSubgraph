@@ -1,6 +1,6 @@
 import { Address, BigInt, Bytes } from '@graphprotocol/graph-ts'
-import { FeeCredited, FeesClaimed, FeesDistributed } from '../generated/V3FeeReceiver/V3FeeReceiver'
-import { ClaimableFeeBalance, FeeDistribution, LockedPosition } from '../generated/schema'
+import { FeeCredited, FeesClaimed, FeesDelegated, FeesDistributed } from '../generated/V3FeeReceiver/V3FeeReceiver'
+import { ClaimableFeeBalance, FeeDelegation, FeeDistribution, LockedPosition } from '../generated/schema'
 import { getToken } from './helpers'
 
 export function handleFeesDistributed(event: FeesDistributed): void {
@@ -25,6 +25,30 @@ export function handleFeesDistributed(event: FeesDistributed): void {
   } else {
     position.creatorEarned1 = position.creatorEarned1.plus(event.params.creatorAmount)
     position.protocolEarned1 = position.protocolEarned1.plus(event.params.protocolAmount)
+  }
+  position.save()
+}
+
+export function handleFeesDelegated(event: FeesDelegated): void {
+  const position = LockedPosition.load(event.params.tokenId.toString())
+  if (position == null) return
+
+  // `asset` is the launched token (token-side policy) or WETH (creator side).
+  const token = getToken(event.params.asset)
+
+  const delegation = new FeeDelegation(event.transaction.hash.concatI32(event.logIndex.toI32()))
+  delegation.position = position.id
+  delegation.token = token.id
+  delegation.manager = event.params.manager
+  delegation.amount = event.params.amount
+  delegation.timestamp = event.block.timestamp
+  delegation.tx = event.transaction.hash
+  delegation.save()
+
+  if (position.token0.toHexString() == token.id.toHexString()) {
+    position.delegatedEarned0 = position.delegatedEarned0.plus(event.params.amount)
+  } else {
+    position.delegatedEarned1 = position.delegatedEarned1.plus(event.params.amount)
   }
   position.save()
 }

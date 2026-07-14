@@ -3,12 +3,12 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "locker_",
+        "name": "initialOwner",
         "type": "address"
       },
       {
         "internalType": "address",
-        "name": "protocolRecipient_",
+        "name": "manager_",
         "type": "address"
       },
       {
@@ -18,12 +18,12 @@
       },
       {
         "internalType": "address",
-        "name": "tokenFeeManager_",
+        "name": "swapRouter_",
         "type": "address"
       },
       {
         "internalType": "address",
-        "name": "creatorFeeManager_",
+        "name": "operator_",
         "type": "address"
       }
     ],
@@ -32,17 +32,39 @@
   },
   {
     "inputs": [],
-    "name": "NothingToClaim",
+    "name": "InsufficientPending",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "OnlyLocker",
+    "name": "OnlyManager",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "OnlyProtocolRecipient",
+    "name": "OnlyOperator",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnableInvalidOwner",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "OwnableUnauthorizedAccount",
     "type": "error"
   },
   {
@@ -67,14 +89,13 @@
     "type": "error"
   },
   {
+    "inputs": [],
+    "name": "ZeroAmount",
+    "type": "error"
+  },
+  {
     "anonymous": false,
     "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "recipient",
-        "type": "address"
-      },
       {
         "indexed": true,
         "internalType": "address",
@@ -86,76 +107,20 @@
         "internalType": "uint256",
         "name": "amount",
         "type": "uint256"
-      }
-    ],
-    "name": "FeeCredited",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "recipient",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "token",
-        "type": "address"
       },
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "amount",
+        "name": "pending",
         "type": "uint256"
       }
     ],
-    "name": "FeesClaimed",
+    "name": "BuyBurnFeesAccrued",
     "type": "event"
   },
   {
     "anonymous": false,
     "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "asset",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "manager",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "FeesDelegated",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
       {
         "indexed": true,
         "internalType": "address",
@@ -167,21 +132,9 @@
         "internalType": "address",
         "name": "creator",
         "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "creatorAmount",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "protocolAmount",
-        "type": "uint256"
       }
     ],
-    "name": "FeesDistributed",
+    "name": "BuyBurnPolicyRegistered",
     "type": "event"
   },
   {
@@ -190,41 +143,104 @@
       {
         "indexed": true,
         "internalType": "address",
-        "name": "previousRecipient",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "wethIn",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "tokensBurned",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "pendingRemaining",
+        "type": "uint256"
+      }
+    ],
+    "name": "BuybackExecuted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "previousOperator",
         "type": "address"
       },
       {
         "indexed": true,
         "internalType": "address",
-        "name": "newRecipient",
+        "name": "newOperator",
         "type": "address"
       }
     ],
-    "name": "ProtocolRecipientUpdated",
+    "name": "OperatorUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "previousOwner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnershipTransferStarted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "previousOwner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnershipTransferred",
     "type": "event"
   },
   {
     "inputs": [],
-    "name": "MAX_BPS",
+    "name": "POOL_FEE",
     "outputs": [
       {
-        "internalType": "uint16",
+        "internalType": "uint24",
         "name": "",
-        "type": "uint16"
+        "type": "uint24"
       }
     ],
     "stateMutability": "view",
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "token",
-        "type": "address"
-      }
-    ],
-    "name": "claim",
+    "inputs": [],
+    "name": "acceptOwnership",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -233,42 +249,34 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "recipient",
+        "name": "token",
         "type": "address"
       },
       {
-        "internalType": "address",
-        "name": "token",
-        "type": "address"
-      }
-    ],
-    "name": "claimable",
-    "outputs": [
+        "internalType": "uint256",
+        "name": "wethIn",
+        "type": "uint256"
+      },
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "minTokensOut",
         "type": "uint256"
       }
     ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "creatorFeeManager",
+    "name": "executeBuyback",
     "outputs": [
       {
-        "internalType": "contract IFeePolicyManager",
-        "name": "",
-        "type": "address"
+        "internalType": "uint256",
+        "name": "tokensBurned",
+        "type": "uint256"
       }
     ],
-    "stateMutability": "view",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
     "inputs": [],
-    "name": "locker",
+    "name": "manager",
     "outputs": [
       {
         "internalType": "address",
@@ -282,29 +290,27 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
         "internalType": "address",
-        "name": "token0",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "token1",
+        "name": "token",
         "type": "address"
       },
       {
         "internalType": "uint256",
-        "name": "amount0",
+        "name": "amount",
         "type": "uint256"
-      },
+      }
+    ],
+    "name": "onFees",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
       {
-        "internalType": "uint256",
-        "name": "amount1",
-        "type": "uint256"
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
       },
       {
         "internalType": "address",
@@ -312,19 +318,25 @@
         "type": "address"
       },
       {
-        "internalType": "uint16",
-        "name": "creatorBps",
-        "type": "uint16"
+        "internalType": "bytes",
+        "name": "",
+        "type": "bytes"
       }
     ],
-    "name": "onFeesCollected",
-    "outputs": [],
+    "name": "onRegister",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
     "inputs": [],
-    "name": "protocolRecipient",
+    "name": "operator",
     "outputs": [
       {
         "internalType": "address",
@@ -337,10 +349,23 @@
   },
   {
     "inputs": [],
-    "name": "tokenFeeManager",
+    "name": "owner",
     "outputs": [
       {
-        "internalType": "contract IFeePolicyManager",
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "pendingOwner",
+    "outputs": [
+      {
+        "internalType": "address",
         "name": "",
         "type": "address"
       }
@@ -352,11 +377,101 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "newRecipient",
+        "name": "token",
         "type": "address"
       }
     ],
-    "name": "updateProtocolRecipient",
+    "name": "pendingWeth",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "renounceOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "operator_",
+        "type": "address"
+      }
+    ],
+    "name": "setOperator",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "swapRouter",
+    "outputs": [
+      {
+        "internalType": "contract ISwapRouter02",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "totalTokensBurned",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "totalWethSpent",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "transferOwnership",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

@@ -37,6 +37,13 @@ type User @entity {
   vestingsCreated: [VestingSchedule!]! @derivedFrom(field: "creator")
   vestingsReceived: [VestingSchedule!]! @derivedFrom(field: "beneficiary")
   lockedPositions: [LockedPosition!]! @derivedFrom(field: "creator")
+  launches: [TokenLaunch!]! @derivedFrom(field: "creator")
+  trades: [Trade!]! @derivedFrom(field: "user")
+  tradingPositions: [TraderPosition!]! @derivedFrom(field: "user")
+  stakingPositions: [StakingPosition!]! @derivedFrom(field: "user")
+  feeVestingsReceived: [FeeVesting!]! @derivedFrom(field: "recipient")
+  "Tokens this address currently owns (canonical TokenOwnerRegistry owner)."
+  tokensOwned: [TokenLaunch!]! @derivedFrom(field: "owner")
 }
 
 "A straight token/LP lock. id = on-chain lock id."
@@ -120,11 +127,15 @@ type LockedPosition @entity {
   creatorEarned1: BigInt!
   protocolEarned0: BigInt!
   protocolEarned1: BigInt!
+  "Lifetime amounts delegated to the token-fee policy system (burn/vest/stake)."
+  delegatedEarned0: BigInt!
+  delegatedEarned1: BigInt!
   createdAt: BigInt!
   createdAtBlock: BigInt!
   createdTx: Bytes!
   collections: [FeeCollection!]! @derivedFrom(field: "position")
   distributions: [FeeDistribution!]! @derivedFrom(field: "position")
+  delegations: [FeeDelegation!]! @derivedFrom(field: "position")
 }
 
 "One collect() crank on a position (raw amounts, pre-split)."
@@ -160,29 +171,294 @@ type ClaimableFeeBalance @entity {
   updatedAt: BigInt!
 }
 
+"One token-side fee amount handed to the token-fee policy system."
+type FeeDelegation @entity(immutable: true) {
+  id: Bytes! # tx hash ++ log index
+  position: LockedPosition!
+  token: Token!
+  "TokenFeeManager the amount was routed through."
+  manager: Bytes!
+  amount: BigInt!
+  timestamp: BigInt!
+  tx: Bytes!
+}
+
 # ---------------------------------------------------------------------------
-# Planned — launchpad / trading terminal (uncomment + add data sources once the
-# terminal contracts are specced). Kept here so the schema evolves in place.
-#
-# type TokenLaunch @entity {
-#   id: Bytes!               # launch contract address or token address
-#   token: Token!
-#   creator: User!
-#   "Bonding-curve phase stats before graduation."
-#   raised: BigInt!
-#   graduated: Boolean!
-#   graduatedAt: BigInt
-#   pool: Bytes              # Uniswap pool after graduation
-#   createdAt: BigInt!
-# }
-#
-# type Swap @entity(immutable: true) {
-#   id: Bytes!
-#   token: Token!
-#   trader: User!
-#   amountIn: BigInt!
-#   amountOut: BigInt!
-#   isBuy: Boolean!
-#   timestamp: BigInt!
-# }
+# TokenFeeManager + modules — per-token LP token-fee policies (burn/vest/stake)
 # ---------------------------------------------------------------------------
+
+"Module registry entry on a FeePolicyManager. id = \"token-<policyId>\" or \"creator-<policyId>\"."
+type FeePolicyType @entity {
+  id: ID!
+  "\"token\" (token-side manager) or \"creator\" (WETH-side manager)."
+  side: String!
+  policyId: Int!
+  "Current module for FUTURE launches; bound tokens keep their launch module."
+  module: Bytes!
+  "Tokens that launched with this policy id."
+  tokenCount: Int!
+  updatedAt: BigInt!
+}
+
+"The TOKEN-side fee policy a token bound to at launch (1=burn, 2=vesting, 3=staking). id = token address."
+type TokenFeePolicy @entity {
+  id: Bytes!
+  token: Token!
+  launch: TokenLaunch
+  policyId: Int!
+  module: Bytes!
+  "Where fee amounts land (module for burn/vesting, the staking pool for staking)."
+  venue: Bytes!
+  "Module-specific config bytes passed at launch."
+  configData: Bytes!
+  "Lifetime token fees routed into this policy."
+  totalFeesHandled: BigInt!
+  handleCount: Int!
+  "Lifetime fee tokens burned (burn policy only)."
+  totalBurned: BigInt!
+  createdAt: BigInt!
+  createdAtBlock: BigInt!
+  createdTx: Bytes!
+}
+
+"The CREATOR-side (WETH) fee policy a token bound to at launch (2=buy-burn, 3=staking; default reward-creator has no entity). id = token address."
+type CreatorFeePolicy @entity {
+  id: Bytes!
+  token: Token!
+  launch: TokenLaunch
+  policyId: Int!
+  module: Bytes!
+  venue: Bytes!
+  configData: Bytes!
+  "Lifetime WETH routed into this policy."
+  totalFeesHandled: BigInt!
+  handleCount: Int!
+  "Buy-burn policy: WETH waiting for the operator's next buyback."
+  pendingWeth: BigInt!
+  "Buy-burn policy: lifetime WETH spent on buybacks."
+  totalWethSpent: BigInt!
+  "Buy-burn policy: lifetime tokens bought and burned."
+  totalTokensBurned: BigInt!
+  buybacks: [BuybackExecution!]! @derivedFrom(field: "policy")
+  createdAt: BigInt!
+  createdAtBlock: BigInt!
+  createdTx: Bytes!
+}
+
+"One operator buyback: WETH in, tokens bought and burned."
+type BuybackExecution @entity(immutable: true) {
+  id: Bytes! # tx hash ++ log index
+  policy: CreatorFeePolicy!
+  token: Token!
+  wethIn: BigInt!
+  tokensBurned: BigInt!
+  "Pending WETH remaining after this buyback."
+  pendingRemaining: BigInt!
+  timestamp: BigInt!
+  tx: Bytes!
+}
+
+"Vesting-policy state for a token (VestingFeeModule). id = token address. Recipient control follows the canonical token owner (TokenLaunch.owner)."
+type FeeVesting @entity {
+  id: Bytes!
+  policy: TokenFeePolicy!
+  token: Token!
+  "Payout destination of the daily release."
+  recipient: User!
+  "Share of the accrued balance released per daily claim."
+  dailyReleaseBps: Int!
+  "Fee tokens currently waiting in the vault."
+  accrued: BigInt!
+  "Lifetime fee tokens that entered the vault."
+  totalAccrued: BigInt!
+  "Lifetime paid out."
+  released: BigInt!
+  lastClaimAt: BigInt!
+  claimCount: Int!
+  claims: [FeeVestingClaim!]! @derivedFrom(field: "vesting")
+  createdAt: BigInt!
+}
+
+"One daily vesting release."
+type FeeVestingClaim @entity(immutable: true) {
+  id: Bytes! # tx hash ++ log index
+  vesting: FeeVesting!
+  recipient: Bytes!
+  amount: BigInt!
+  "Vault balance remaining after this claim."
+  remaining: BigInt!
+  timestamp: BigInt!
+  tx: Bytes!
+}
+
+"Per-token staking pool (StakingFeeModule clone; created when EITHER fee side picks staking). Tracks BOTH reward assets. id = pool address."
+type StakingPool @entity {
+  id: Bytes!
+  token: Token!
+  "Master copy this pool was cloned from."
+  implementation: Bytes!
+  totalStaked: BigInt!
+  "Token rewards received while nobody was staked; released at the first stake."
+  queuedRewards: BigInt!
+  "WETH rewards received while nobody was staked; released at the first stake."
+  queuedWethRewards: BigInt!
+  "Lifetime token rewards (fees + donations) notified to the pool."
+  totalRewardsAdded: BigInt!
+  "Lifetime WETH rewards (creator fee share + donations) notified to the pool."
+  totalWethRewardsAdded: BigInt!
+  "Lifetime token rewards claimed by stakers."
+  totalRewardsPaid: BigInt!
+  "Lifetime WETH rewards claimed by stakers."
+  totalWethRewardsPaid: BigInt!
+  "Stakers with a nonzero balance right now."
+  stakerCount: Int!
+  depositCount: Int!
+  withdrawCount: Int!
+  claimCount: Int!
+  positions: [StakingPosition!]! @derivedFrom(field: "pool")
+  actions: [StakingAction!]! @derivedFrom(field: "pool")
+  createdAt: BigInt!
+  createdAtBlock: BigInt!
+  createdTx: Bytes!
+}
+
+"One user's stake in a pool. id = pool ++ user."
+type StakingPosition @entity {
+  id: Bytes!
+  pool: StakingPool!
+  user: User!
+  "Currently staked."
+  amount: BigInt!
+  "Unix seconds the current 24h deposit lock expires (0 = never deposited)."
+  lockedUntil: BigInt!
+  totalDeposited: BigInt!
+  totalWithdrawn: BigInt!
+  "Lifetime reward tokens claimed — realized profit in the staked token."
+  rewardsClaimed: BigInt!
+  "Lifetime WETH rewards claimed — realized profit in WETH."
+  wethRewardsClaimed: BigInt!
+  firstStakedAt: BigInt!
+  lastActionAt: BigInt!
+}
+
+"One staking interaction (deposit / withdraw / reward claim)."
+type StakingAction @entity(immutable: true) {
+  id: Bytes! # tx hash ++ log index
+  pool: StakingPool!
+  user: User!
+  "DEPOSIT | WITHDRAW | CLAIM"
+  kind: String!
+  "Asset moved: the staked token, or WETH for WETH-reward claims."
+  asset: Bytes!
+  amount: BigInt!
+  timestamp: BigInt!
+  tx: Bytes!
+}
+
+# ---------------------------------------------------------------------------
+# HoodLauncher — the launchpad (pool-is-the-curve; no graduation)
+# ---------------------------------------------------------------------------
+
+"Singleton (id: \"launcher\")."
+type LauncherStats @entity {
+  id: ID!
+  launchCount: Int!
+}
+
+"One launched token. id = token address."
+type TokenLaunch @entity {
+  id: Bytes!
+  token: Token!
+  creator: User!
+  pool: Bytes!
+  positionId: BigInt!
+  "The permanently locked LP position backing this token."
+  position: LockedPosition
+  supply: BigInt!
+  "Starting tick as passed (token0-is-new-token orientation)."
+  startTick: Int!
+  creatorBps: Int!
+  "Sniper-guard snapshot; 0/0 when the creator opted out."
+  maxWalletBps: Int!
+  restrictionBlocks: BigInt!
+  "ERC-7572 contractURI; kept current via the HoodToken template."
+  metadataURI: String!
+  image: String!
+  description: String!
+  socials: String!
+  devBuyEth: BigInt!
+  devBuyTokens: BigInt!
+  "Canonical token owner (TokenOwnerRegistry); zero address = renounced."
+  owner: User!
+  "Token-side fee policy chosen at launch; null = default in-kind split."
+  feePolicy: TokenFeePolicy
+  "Creator-side (WETH) fee policy; null = default reward-creator."
+  creatorFeePolicy: CreatorFeePolicy
+  createdAt: BigInt!
+  createdAtBlock: BigInt!
+  createdTx: Bytes!
+}
+
+# ---------------------------------------------------------------------------
+# V1TradeManager — the trading terminal (Token/ETH trades on Uni V2/V3/V4)
+# ---------------------------------------------------------------------------
+
+"Singleton (id: \"terminal\")."
+type TerminalStats @entity {
+  id: ID!
+  tradeCount: Int!
+  "Sum of gross ETH sides across all trades."
+  volumeEth: BigInt!
+  "Platform fees taken by the trade manager (from TradeExecuted)."
+  feesEth: BigInt!
+  "Cross-check: fees actually received by the TradeFeeReceiver."
+  feesReceivedEth: BigInt!
+  feesWithdrawnEth: BigInt!
+}
+
+"One terminal trade. The raw material for trade history and PnL."
+type Trade @entity(immutable: true) {
+  id: Bytes! # tx hash ++ log index
+  user: User!
+  token: Token!
+  isBuy: Boolean!
+  "0 = Uniswap V2, 1 = V3, 2 = V4."
+  dex: Int!
+  "Gross ETH side: buys = ETH sent in (fee included), sells = ETH out pre-fee."
+  ethAmount: BigInt!
+  tokenAmount: BigInt!
+  "Platform fee (ETH)."
+  fee: BigInt!
+  timestamp: BigInt!
+  block: BigInt!
+  tx: Bytes!
+}
+
+"Per-user lifetime terminal aggregates. id = user address."
+type TraderStats @entity {
+  id: Bytes!
+  user: User!
+  tradeCount: Int!
+  volumeEth: BigInt!
+  feesPaidEth: BigInt!
+  firstTradeAt: BigInt!
+  lastTradeAt: BigInt!
+}
+
+"Per-user-per-token aggregates — the PnL building block. id = user ++ token."
+type TraderPosition @entity {
+  id: Bytes!
+  user: User!
+  token: Token!
+  tradeCount: Int!
+  buyCount: Int!
+  sellCount: Int!
+  tokensBought: BigInt!
+  tokensSold: BigInt!
+  "ETH spent on buys, gross (the fee is a real cost)."
+  ethSpent: BigInt!
+  "ETH received from sells, net of the platform fee (what the user got)."
+  ethReceived: BigInt!
+  feesPaidEth: BigInt!
+  lastTradeAt: BigInt!
+}

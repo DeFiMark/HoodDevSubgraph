@@ -94,6 +94,7 @@ dataSources:
       entities:
         - LockedPosition
         - FeeDistribution
+        - FeeDelegation
         - ClaimableFeeBalance
         - Token
         - User
@@ -105,8 +106,345 @@ dataSources:
       eventHandlers:
         - event: FeesDistributed(indexed uint256,indexed address,indexed address,uint256,uint256)
           handler: handleFeesDistributed
+        - event: FeesDelegated(indexed uint256,indexed address,indexed address,uint256)
+          handler: handleFeesDelegated
         - event: FeeCredited(indexed address,indexed address,uint256)
           handler: handleFeeCredited
         - event: FeesClaimed(indexed address,indexed address,uint256)
           handler: handleFeesClaimed
       file: ./src/fee-receiver.ts
+  - kind: ethereum
+    name: HoodLauncher
+    network: robinhood-mainnet
+    source:
+      # TODO: set after deploying the Launchpad Ignition module; same startBlock
+      # as FeeLocker/V3FeeReceiver (they deploy in one module).
+      address: "0x0000000000000000000000000000000000000000"
+      abi: HoodLauncher
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - LauncherStats
+        - TokenLaunch
+        - TokenFeePolicy
+        - CreatorFeePolicy
+        - Token
+        - User
+      abis:
+        - name: HoodLauncher
+          file: ./abis/HoodLauncher.json
+        - name: HoodToken
+          file: ./abis/HoodToken.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: TokenLaunched(indexed address,indexed address,indexed address,uint256,uint256,int24,uint16,uint16,uint32,string,string,string,uint256,uint256)
+          handler: handleTokenLaunched
+      file: ./src/launcher.ts
+  # Token-side FeePolicyManager instance (feeAsset = the token itself).
+  - kind: ethereum
+    name: TokenFeeManager
+    network: robinhood-mainnet
+    source:
+      # TODO: set after deploying the Launchpad Ignition module; same startBlock
+      # as the launcher.
+      address: "0x0000000000000000000000000000000000000000"
+      abi: FeePolicyManager
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - FeePolicyType
+        - TokenFeePolicy
+        - TokenLaunch
+        - Token
+        - User
+      abis:
+        - name: FeePolicyManager
+          file: ./abis/FeePolicyManager.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: ModuleSet(indexed uint16,indexed address,indexed address)
+          handler: handleModuleSet
+        - event: TokenPolicySet(indexed address,indexed uint16,indexed address,address,bytes)
+          handler: handleTokenPolicySet
+        - event: TokenFeesHandled(indexed address,indexed address,indexed address,uint256)
+          handler: handleTokenFeesHandled
+      file: ./src/token-fee-manager.ts
+  # Creator-side FeePolicyManager instance (feeAsset = WETH).
+  - kind: ethereum
+    name: CreatorFeeManager
+    network: robinhood-mainnet
+    source:
+      # TODO: set after deploying the Launchpad Ignition module + startBlock.
+      address: "0x0000000000000000000000000000000000000000"
+      abi: FeePolicyManager
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - FeePolicyType
+        - CreatorFeePolicy
+        - TokenLaunch
+        - Token
+        - User
+      abis:
+        - name: FeePolicyManager
+          file: ./abis/FeePolicyManager.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: ModuleSet(indexed uint16,indexed address,indexed address)
+          handler: handleModuleSet
+        - event: TokenPolicySet(indexed address,indexed uint16,indexed address,address,bytes)
+          handler: handleTokenPolicySet
+        - event: TokenFeesHandled(indexed address,indexed address,indexed address,uint256)
+          handler: handleTokenFeesHandled
+      file: ./src/creator-fee-manager.ts
+  - kind: ethereum
+    name: TokenOwnerRegistry
+    network: robinhood-mainnet
+    source:
+      # TODO: set after deploying the Launchpad Ignition module + startBlock.
+      address: "0x0000000000000000000000000000000000000000"
+      abi: TokenOwnerRegistry
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - TokenLaunch
+        - User
+      abis:
+        - name: TokenOwnerRegistry
+          file: ./abis/TokenOwnerRegistry.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: TokenOwnershipTransferred(indexed address,indexed address,indexed address)
+          handler: handleTokenOwnershipTransferred
+      file: ./src/owner-registry.ts
+  - kind: ethereum
+    name: BuyBurnFeeModule
+    network: robinhood-mainnet
+    source:
+      # TODO: set after deploying the Launchpad Ignition module + startBlock.
+      address: "0x0000000000000000000000000000000000000000"
+      abi: BuyBurnFeeModule
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - CreatorFeePolicy
+        - BuybackExecution
+      abis:
+        - name: BuyBurnFeeModule
+          file: ./abis/BuyBurnFeeModule.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: BuyBurnFeesAccrued(indexed address,uint256,uint256)
+          handler: handleBuyBurnFeesAccrued
+        - event: BuybackExecuted(indexed address,uint256,uint256,uint256)
+          handler: handleBuybackExecuted
+      file: ./src/buy-burn-module.ts
+  - kind: ethereum
+    name: BurnFeeModule
+    network: robinhood-mainnet
+    source:
+      # TODO: set after deploying the Launchpad Ignition module + startBlock.
+      address: "0x0000000000000000000000000000000000000000"
+      abi: BurnFeeModule
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - TokenFeePolicy
+      abis:
+        - name: BurnFeeModule
+          file: ./abis/BurnFeeModule.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: FeesBurned(indexed address,uint256,uint256)
+          handler: handleFeesBurned
+      file: ./src/burn-module.ts
+  - kind: ethereum
+    name: VestingFeeModule
+    network: robinhood-mainnet
+    source:
+      # TODO: set after deploying the Launchpad Ignition module + startBlock.
+      address: "0x0000000000000000000000000000000000000000"
+      abi: VestingFeeModule
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - FeeVesting
+        - FeeVestingClaim
+        - Token
+        - User
+      abis:
+        - name: VestingFeeModule
+          file: ./abis/VestingFeeModule.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: VestingPolicyRegistered(indexed address,indexed address,indexed address,uint16)
+          handler: handleVestingPolicyRegistered
+        - event: VestingFeesAccrued(indexed address,uint256,uint256)
+          handler: handleVestingFeesAccrued
+        - event: VestingFeesClaimed(indexed address,indexed address,uint256,uint256)
+          handler: handleVestingFeesClaimed
+        - event: VestingRecipientUpdated(indexed address,indexed address,indexed address)
+          handler: handleVestingRecipientUpdated
+      file: ./src/vesting-module.ts
+  - kind: ethereum
+    name: StakingFeeModule
+    network: robinhood-mainnet
+    source:
+      # TODO: set after deploying the Launchpad Ignition module + startBlock.
+      address: "0x0000000000000000000000000000000000000000"
+      abi: StakingFeeModule
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - StakingPool
+        - Token
+        - User
+      abis:
+        - name: StakingFeeModule
+          file: ./abis/StakingFeeModule.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: StakingPoolCreated(indexed address,indexed address,indexed address)
+          handler: handleStakingPoolCreated
+      file: ./src/staking-module.ts
+  - kind: ethereum
+    name: V1TradeManager
+    network: robinhood-mainnet
+    source:
+      # TODO: set after deploying the Terminal Ignition module + startBlock.
+      address: "0x0000000000000000000000000000000000000000"
+      abi: V1TradeManager
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - TerminalStats
+        - Trade
+        - TraderStats
+        - TraderPosition
+        - Token
+        - User
+      abis:
+        - name: V1TradeManager
+          file: ./abis/V1TradeManager.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: TradeExecuted(indexed address,indexed address,indexed bool,uint8,uint256,uint256,uint256)
+          handler: handleTradeExecuted
+      file: ./src/trade-manager.ts
+  - kind: ethereum
+    name: TradeFeeReceiver
+    network: robinhood-mainnet
+    source:
+      # TODO: set after deploying the Terminal Ignition module + startBlock.
+      address: "0x0000000000000000000000000000000000000000"
+      abi: TradeFeeReceiver
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - TerminalStats
+      abis:
+        - name: TradeFeeReceiver
+          file: ./abis/TradeFeeReceiver.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: TradeFeeReceived(indexed address,indexed address,uint256)
+          handler: handleTradeFeeReceived
+        - event: Withdrawn(indexed address,uint256)
+          handler: handleWithdrawn
+      file: ./src/trade-fee-receiver.ts
+templates:
+  # Spawned per launched token; keeps creator-editable metadata current.
+  - kind: ethereum/contract
+    name: HoodToken
+    network: robinhood-mainnet
+    source:
+      abi: HoodToken
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - TokenLaunch
+      abis:
+        - name: HoodToken
+          file: ./abis/HoodToken.json
+      eventHandlers:
+        - event: ContractURIUpdated()
+          handler: handleContractURIUpdated
+        - event: ImageUpdated(string)
+          handler: handleImageUpdated
+        - event: DescriptionUpdated(string)
+          handler: handleDescriptionUpdated
+        - event: SocialsUpdated(string)
+          handler: handleSocialsUpdated
+      file: ./src/hood-token.ts
+  # Spawned per staking-policy launch by StakingPoolCreated.
+  - kind: ethereum/contract
+    name: TokenStakingPool
+    network: robinhood-mainnet
+    source:
+      abi: TokenStakingPool
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - StakingPool
+        - StakingPosition
+        - StakingAction
+        - User
+      abis:
+        - name: TokenStakingPool
+          file: ./abis/TokenStakingPool.json
+      eventHandlers:
+        - event: Staked(indexed address,uint256,uint256,uint64)
+          handler: handleStaked
+        - event: Withdrawn(indexed address,uint256,uint256)
+          handler: handleWithdrawn
+        - event: RewardPaid(indexed address,indexed address,uint256)
+          handler: handleRewardPaid
+        - event: RewardAdded(indexed address,uint256,uint256)
+          handler: handleRewardAdded
+        - event: RewardQueued(indexed address,uint256,uint256)
+          handler: handleRewardQueued
+      file: ./src/staking-pool.ts
