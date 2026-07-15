@@ -490,6 +490,28 @@ dataSources:
           handler: handleReferralClaimed
       file: ./src/referral.ts
 templates:
+  # Spawned per launch on the launch's canonical (LP-locked) Uniswap V3 pool;
+  # keeps TokenLaunch's live price/mcap/volume/last-trade state current — the
+  # landing-page board sorts on these with zero external API spend.
+  - kind: ethereum/contract
+    name: LaunchPool
+    network: robinhood-mainnet
+    source:
+      abi: UniswapV3Pool
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - TokenLaunch
+        - LaunchHourData
+      abis:
+        - name: UniswapV3Pool
+          file: ./abis/UniswapV3Pool.json
+      eventHandlers:
+        - event: Swap(indexed address,indexed address,int256,int256,uint160,uint128,int24)
+          handler: handleLaunchPoolSwap
+      file: ./src/launch-pool.ts
   # Spawned per launched token; keeps creator-editable metadata current.
   - kind: ethereum/contract
     name: HoodToken

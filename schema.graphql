@@ -400,9 +400,50 @@ type TokenLaunch @entity {
   feePolicy: TokenFeePolicy
   "Creator-side (WETH) fee policy; null = default reward-creator."
   creatorFeePolicy: CreatorFeePolicy
+
+  # ---- live market state (LaunchPool template; ETH-denominated) -----------
+  # Every launched token trades in ONE canonical, LP-locked V3 pool created at
+  # launch, so indexing that pool's swaps captures all venues (aggregators
+  # route through it). USD is display-time: multiply by the app's ETH/USD.
+  "True when the launched token is token0 of the pool (token address < WETH)."
+  tokenIsToken0: Boolean!
+  "FDV the pool OPENED at (pre dev-buy), in ETH: 1.0001^startTick × supply."
+  initialMcapEth: BigDecimal!
+  "Latest pool price, ETH per whole token. Seeded from startTick at launch."
+  lastPriceEth: BigDecimal!
+  "lastPriceEth × supply."
+  currentMcapEth: BigDecimal!
+  "currentMcapEth / initialMcapEth — the growth-since-launch ranking key."
+  mcapGrowth: BigDecimal!
+  "Timestamp of the launch pool's last swap; 0 until the first trade."
+  lastTradeAt: BigInt!
+  "Lifetime swap totals on the launch pool."
+  poolTxCount: Int!
+  poolBuys: Int!
+  poolSells: Int!
+  "Lifetime ETH-side volume on the launch pool."
+  volumeEth: BigDecimal!
+
   createdAt: BigInt!
   createdAtBlock: BigInt!
   createdTx: Bytes!
+}
+
+"""
+Hourly trade bucket for a launch's pool — the windowed-volume source (24h
+volume = sum of the last 24 buckets; only hours WITH trades exist).
+id = token address ++ hour index (unix seconds / 3600, i32).
+"""
+type LaunchHourData @entity {
+  id: Bytes!
+  launch: TokenLaunch!
+  "Bucket start, unix seconds (hour index × 3600)."
+  hourStart: BigInt!
+  "ETH-side volume inside this hour."
+  volumeEth: BigDecimal!
+  txCount: Int!
+  buys: Int!
+  sells: Int!
 }
 
 # ---------------------------------------------------------------------------
