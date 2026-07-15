@@ -400,7 +400,8 @@ type TokenLaunch @entity {
 }
 
 # ---------------------------------------------------------------------------
-# V1TradeManager — the trading terminal (Token/ETH trades on Uni V2/V3/V4)
+# V1TradeManager / V2TradeManager — the trading terminal (Token/ETH trades on
+# Uni V2/V3/V4). Both managers feed the same entities; V2 adds referral fields.
 # ---------------------------------------------------------------------------
 
 "Singleton (id: \"terminal\")."
@@ -409,11 +410,13 @@ type TerminalStats @entity {
   tradeCount: Int!
   "Sum of gross ETH sides across all trades."
   volumeEth: BigInt!
-  "Platform fees taken by the trade manager (from TradeExecuted)."
+  "Platform fees taken by the trade managers (from TradeExecuted; total incl. referral carve-outs)."
   feesEth: BigInt!
-  "Cross-check: fees actually received by the TradeFeeReceiver."
+  "Cross-check: fees actually received by the TradeFeeReceivers (protocol share only on V2)."
   feesReceivedEth: BigInt!
   feesWithdrawnEth: BigInt!
+  "Running total carved out to referrers (V2). Cross-check vs Σ ReferralEarning.amountEth."
+  referralFeesEth: BigInt!
 }
 
 "One terminal trade. The raw material for trade history and PnL."
@@ -427,8 +430,12 @@ type Trade @entity(immutable: true) {
   "Gross ETH side: buys = ETH sent in (fee included), sells = ETH out pre-fee."
   ethAmount: BigInt!
   tokenAmount: BigInt!
-  "Platform fee (ETH)."
+  "TOTAL platform fee (ETH), protocol + referral shares."
   fee: BigInt!
+  "Referrer credited on this trade (V2 only; null = none)."
+  referrer: Bytes
+  "Referral portion of `fee` (0 on V1 trades / no referrer)."
+  refFee: BigInt!
   timestamp: BigInt!
   block: BigInt!
   tx: Bytes!
@@ -441,6 +448,8 @@ type TraderStats @entity {
   tradeCount: Int!
   volumeEth: BigInt!
   feesPaidEth: BigInt!
+  "Referral fees this trader's trades generated for their referrer(s)."
+  referralFeesGeneratedEth: BigInt!
   firstTradeAt: BigInt!
   lastTradeAt: BigInt!
 }
@@ -461,4 +470,53 @@ type TraderPosition @entity {
   ethReceived: BigInt!
   feesPaidEth: BigInt!
   lastTradeAt: BigInt!
+}
+
+# ---------------------------------------------------------------------------
+# ReferralManager — claim-based referral-fee accrual (V2 terminal)
+# Single-level payouts on-chain; the multi-level downline tree is reconstructed
+# off-chain by traversing Referral (trader → referrer) edges.
+# ---------------------------------------------------------------------------
+
+"A referrer's lifetime + claimable referral state. id = referrer address."
+type Referrer @entity {
+  id: Bytes!
+  user: User!
+  pendingEth: BigInt!
+  lifetimeEarnedEth: BigInt!
+  claimedEth: BigInt!
+  "Distinct traders attributed (first-touch)."
+  refereeCount: Int!
+  earnings: [ReferralEarning!]! @derivedFrom(field: "referrer")
+  referees: [Referral!]! @derivedFrom(field: "referrer")
+  claims: [ReferralClaim!]! @derivedFrom(field: "referrer")
+}
+
+"First-touch edge trader → referrer (analytics only, never payout-authoritative). id = trader address."
+type Referral @entity {
+  id: Bytes!
+  trader: User!
+  referrer: Referrer!
+  attributedAt: BigInt!
+}
+
+"One referral-fee accrual (immutable). id = tx ++ logIndex."
+type ReferralEarning @entity(immutable: true) {
+  id: Bytes!
+  referrer: Referrer!
+  trader: User!
+  token: Token!
+  amountEth: BigInt!
+  timestamp: BigInt!
+  tx: Bytes!
+}
+
+"One claim (immutable). id = tx ++ logIndex."
+type ReferralClaim @entity(immutable: true) {
+  id: Bytes!
+  referrer: Referrer!
+  to: Bytes!
+  amountEth: BigInt!
+  timestamp: BigInt!
+  tx: Bytes!
 }

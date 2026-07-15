@@ -399,6 +399,96 @@ dataSources:
         - event: Withdrawn(indexed address,uint256)
           handler: handleWithdrawn
       file: ./src/trade-fee-receiver.ts
+  # ---- Trading terminal V2 (ignition/modules/TerminalV2.ts) ---------------
+  # Supersedes V1TradeManager for new trades (multi-hop + referrals). The V1
+  # data sources above stay for history. TradeExecuted gains ref + refFee —
+  # `fee` is still the TOTAL platform fee, refFee the referral carve-out.
+  # Deployed 2026-07-15, blocks 10297720..10297809 → startBlock 10297720.
+  - kind: ethereum
+    name: V2TradeManager
+    network: robinhood-mainnet
+    source:
+      address: "0x77A2206d25c1088e1B4c9eC3E57eb90F76a696E5"
+      abi: V2TradeManager
+      startBlock: 10297720
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - TerminalStats
+        - Trade
+        - TraderStats
+        - TraderPosition
+        - Token
+        - User
+      abis:
+        - name: V2TradeManager
+          file: ./abis/V2TradeManager.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: TradeExecuted(indexed address,indexed address,indexed bool,uint8,uint256,uint256,uint256,address,uint256)
+          handler: handleTradeExecutedV2
+      file: ./src/trade-manager-v2.ts
+  # Fresh receiver bound to V2 (the binding is immutable); banks the PROTOCOL
+  # share of the fee (total minus referral carve-out). Same ABI + handlers.
+  - kind: ethereum
+    name: V2TradeFeeReceiver
+    network: robinhood-mainnet
+    source:
+      address: "0xcB597581D5c70FeC91244f49Def786D0D5360e53"
+      abi: TradeFeeReceiver
+      startBlock: 10297720
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - TerminalStats
+      abis:
+        - name: TradeFeeReceiver
+          file: ./abis/TradeFeeReceiver.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: TradeFeeReceived(indexed address,indexed address,uint256)
+          handler: handleTradeFeeReceived
+        - event: Withdrawn(indexed address,uint256)
+          handler: handleWithdrawn
+      file: ./src/trade-fee-receiver.ts
+  # Claim-based referral accrual; builds the Referrer/Referral downline edges.
+  - kind: ethereum
+    name: ReferralManager
+    network: robinhood-mainnet
+    source:
+      address: "0x2A8B1f9617336C26bD339C6b96823C5A6Bf68f5C"
+      abi: ReferralManager
+      startBlock: 10297720
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Referrer
+        - Referral
+        - ReferralEarning
+        - ReferralClaim
+        - Token
+        - User
+      abis:
+        - name: ReferralManager
+          file: ./abis/ReferralManager.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: ReferralAttributed(indexed address,indexed address)
+          handler: handleReferralAttributed
+        - event: ReferralFeeAccrued(indexed address,indexed address,indexed address,uint256)
+          handler: handleReferralFeeAccrued
+        - event: ReferralClaimed(indexed address,indexed address,uint256)
+          handler: handleReferralClaimed
+      file: ./src/referral.ts
 templates:
   # Spawned per launched token; keeps creator-editable metadata current.
   - kind: ethereum/contract
