@@ -60,9 +60,9 @@ dataSources:
     name: FeeLocker
     network: robinhood-mainnet
     source:
-      address: "0xb76ec165764c28a7826F63C46592cf74491Cf41B"
+      address: "0x0606a93703B13A65997E439A713729c28e4bf883"
       abi: FeeLocker
-      startBlock: 9401710
+      startBlock: 10718310
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -95,9 +95,9 @@ dataSources:
     name: V3FeeReceiver
     network: robinhood-mainnet
     source:
-      address: "0x0F0F6d5FE6ddb26165391f519a23856e295E30e8"
+      address: "0xCE240c61E3d5cf2b51f5d72A5efdFB23D775790C"
       abi: V3FeeReceiver
-      startBlock: 9401710
+      startBlock: 10718310
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -128,9 +128,9 @@ dataSources:
     name: HoodLauncher
     network: robinhood-mainnet
     source:
-      address: "0x77C6C3E046Bef853dd66caC6Db9e95BcD3915FCc"
+      address: "0x3A1be08E3aE8b0396066f9c0ea97268Cc910ab85"
       abi: HoodLauncher
-      startBlock: 9401710
+      startBlock: 10718310
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -158,9 +158,9 @@ dataSources:
     name: TokenFeeManager
     network: robinhood-mainnet
     source:
-      address: "0xcf144fB29c3f83f800F617e2AA61ec929638ce6c"
+      address: "0xB04d8a01b1E9163aE8Dd47647F2Fdb0e93CD89cF"
       abi: FeePolicyManager
-      startBlock: 9401710
+      startBlock: 10718310
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -189,9 +189,9 @@ dataSources:
     name: CreatorFeeManager
     network: robinhood-mainnet
     source:
-      address: "0x1A4aB101f2935ac073197084b617ad2F91ba934F"
+      address: "0xa3e76D397b081DbA17B980B3620f2F200cFF9b71"
       abi: FeePolicyManager
-      startBlock: 9401710
+      startBlock: 10718310
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -219,9 +219,9 @@ dataSources:
     name: TokenOwnerRegistry
     network: robinhood-mainnet
     source:
-      address: "0x3B806bc098A388Cac346e9307476f96A6dc2a0D8"
+      address: "0xEBbf66e306cE0Df652898A4894f6aBAF09F8Cd58"
       abi: TokenOwnerRegistry
-      startBlock: 9401710
+      startBlock: 10718310
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -242,9 +242,9 @@ dataSources:
     name: BuyBurnFeeModule
     network: robinhood-mainnet
     source:
-      address: "0xB483517670C3f5be004BeeE9F0672Ad3787ea530"
+      address: "0xE1d4277E83Da7Db7FE2EBcc863734D575bd931D8"
       abi: BuyBurnFeeModule
-      startBlock: 9401710
+      startBlock: 10755307
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -260,16 +260,16 @@ dataSources:
       eventHandlers:
         - event: BuyBurnFeesAccrued(indexed address,uint256,uint256)
           handler: handleBuyBurnFeesAccrued
-        - event: BuybackExecuted(indexed address,uint256,uint256,uint256)
+        - event: BuybackExecuted(indexed address,uint256,uint256,uint256,indexed address,bool)
           handler: handleBuybackExecuted
       file: ./src/buy-burn-module.ts
   - kind: ethereum
     name: BurnFeeModule
     network: robinhood-mainnet
     source:
-      address: "0x045423ADC749e8655e0Eb08162710b5A7C58C574"
+      address: "0x45881683E01d218DD610689A5b07d3D33F3e657A"
       abi: BurnFeeModule
-      startBlock: 9401710
+      startBlock: 10718310
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -289,9 +289,9 @@ dataSources:
     name: VestingFeeModule
     network: robinhood-mainnet
     source:
-      address: "0x110b7bD5305e12957dE3e03A0B3DFb7d1Fc8bad3"
+      address: "0x1A89Dbb465F012abC20213D468D616ae0912F718"
       abi: VestingFeeModule
-      startBlock: 9401710
+      startBlock: 10718310
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -320,9 +320,9 @@ dataSources:
     name: StakingFeeModule
     network: robinhood-mainnet
     source:
-      address: "0xe35be31390f43E8678337F5c1dB262378bD105FF"
+      address: "0x5B0f209CA0C4fE624e9fC133da95BdeBC96bE16c"
       abi: StakingFeeModule
-      startBlock: 9401710
+      startBlock: 10718310
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7

@@ -233,19 +233,21 @@ type CreatorFeePolicy @entity {
   "Lifetime WETH routed into this policy."
   totalFeesHandled: BigInt!
   handleCount: Int!
-  "Buy-burn policy: WETH waiting for the operator's next buyback."
+  "Buy-burn policy: WETH waiting for the next buyback."
   pendingWeth: BigInt!
   "Buy-burn policy: lifetime WETH spent on buybacks."
   totalWethSpent: BigInt!
   "Buy-burn policy: lifetime tokens bought and burned."
   totalTokensBurned: BigInt!
+  "Buy-burn policy: last buyback timestamp (initialized at launch). The trigger is PUBLIC once 90 days pass with no call — render the countdown from this."
+  lastBuybackAt: BigInt!
   buybacks: [BuybackExecution!]! @derivedFrom(field: "policy")
   createdAt: BigInt!
   createdAtBlock: BigInt!
   createdTx: Bytes!
 }
 
-"One operator buyback: WETH in, tokens bought and burned."
+"One buyback: WETH in, tokens bought and burned."
 type BuybackExecution @entity(immutable: true) {
   id: Bytes! # tx hash ++ log index
   policy: CreatorFeePolicy!
@@ -254,6 +256,10 @@ type BuybackExecution @entity(immutable: true) {
   tokensBurned: BigInt!
   "Pending WETH remaining after this buyback."
   pendingRemaining: BigInt!
+  "Who triggered it (the token owner, or anyone once public)."
+  caller: Bytes!
+  "True when triggered via the public 90-day path rather than by the token owner."
+  isPublic: Boolean!
   timestamp: BigInt!
   tx: Bytes!
 }

@@ -33,6 +33,7 @@ export function handleTokenPolicySet(event: TokenPolicySet): void {
   policy.pendingWeth = BigInt.zero()
   policy.totalWethSpent = BigInt.zero()
   policy.totalTokensBurned = BigInt.zero()
+  policy.lastBuybackAt = event.block.timestamp // launch starts the public clock
   policy.createdAt = event.block.timestamp
   policy.createdAtBlock = event.block.number
   policy.createdTx = event.transaction.hash

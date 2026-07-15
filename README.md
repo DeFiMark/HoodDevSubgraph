@@ -5,7 +5,7 @@
 > ```
 > https://api.goldsky.com/api/public/project_cmg2x3lrvy37d01vq4bsnbtig/subgraphs/hooddev/prod/gn
 > ```
-> `prod` currently points at `hooddev/1.0.2`. Shipping a new version is: deploy
+> `prod` currently points at `hooddev/1.2.0` (Launcher v2 stack + the owner-triggered BuyBurnFeeModule v2, 2026-07-15). Shipping a new version is: deploy
 > it, **wait for `Synced: 100%`**, then move the tag — no frontend change. The
 > frontend already reads this URL from `frontend/src/lib/subgraph/config.ts`.
 >
