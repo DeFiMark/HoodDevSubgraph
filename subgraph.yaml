@@ -457,7 +457,68 @@ dataSources:
         - event: Withdrawn(indexed address,uint256)
           handler: handleWithdrawn
       file: ./src/trade-fee-receiver.ts
+  # ---- Trading terminal V3 (ignition/modules/TerminalV3.ts) ---------------
+  # Supersedes V2TradeManager for new trades: adds the bonding-curve venues
+  # (Trade.dex 3 = FLAP_CURVE, 4 = VIRTUALS_CURVE) so launchpad tokens trade
+  # BEFORE graduating to Uniswap. TradeExecuted is byte-identical to V2's, so
+  # the datasource reuses the V2 ABI + handleTradeExecutedV2 (same precedent
+  # as the receivers sharing the TradeFeeReceiver ABI). V2 sources stay for
+  # history. ReferralManager is REUSED by V3 (no new datasource).
+  # Deployed 2026-07-16, blocks 11460699..11460775 → startBlock 11460699.
+  - kind: ethereum
+    name: V3TradeManager
+    network: robinhood-mainnet
+    source:
+      address: "0xA48B11D0fb7B9C0a2bB442C5e8BeeD4673d72103"
+      abi: V2TradeManager
+      startBlock: 11460699
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - TerminalStats
+        - Trade
+        - TraderStats
+        - TraderPosition
+        - Token
+        - User
+      abis:
+        - name: V2TradeManager
+          file: ./abis/V2TradeManager.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: TradeExecuted(indexed address,indexed address,indexed bool,uint8,uint256,uint256,uint256,address,uint256)
+          handler: handleTradeExecutedV2
+      file: ./src/trade-manager-v2.ts
+  # Fresh receiver bound to V3 (the binding is immutable). Same ABI + handlers.
+  - kind: ethereum
+    name: V3TradeFeeReceiver
+    network: robinhood-mainnet
+    source:
+      address: "0x9665d420f4E03cf959472018A9A5e6f3cd89C587"
+      abi: TradeFeeReceiver
+      startBlock: 11460699
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - TerminalStats
+      abis:
+        - name: TradeFeeReceiver
+          file: ./abis/TradeFeeReceiver.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: TradeFeeReceived(indexed address,indexed address,uint256)
+          handler: handleTradeFeeReceived
+        - event: Withdrawn(indexed address,uint256)
+          handler: handleWithdrawn
+      file: ./src/trade-fee-receiver.ts
   # Claim-based referral accrual; builds the Referrer/Referral downline edges.
+  # Shared by V2TradeManager AND V3TradeManager (both are authorized managers).
   - kind: ethereum
     name: ReferralManager
     network: robinhood-mainnet
