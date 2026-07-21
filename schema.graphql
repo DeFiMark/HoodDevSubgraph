@@ -109,9 +109,17 @@ type FeeLockerStats @entity {
   feeReceiver: Bytes!
 }
 
-"A permanently locked Uniswap V3 position. id = V3 position NFT id."
+"""
+A permanently locked V3-style LP position (Uniswap V3 or SushiSwap V3).
+id = "<locker address>-<position NFT id>" — locker-scoped because each venue
+has its own FeeLocker + position manager and NFT ids collide across them.
+"""
 type LockedPosition @entity {
   id: ID!
+  "The FeeLocker holding this position (one locker per venue + the legacy v2 locker)."
+  locker: Bytes!
+  "The position NFT id on that locker's position manager."
+  positionId: BigInt!
   pool: Bytes!
   token0: Token!
   token1: Token!
@@ -376,6 +384,12 @@ type TokenLaunch @entity {
   id: Bytes!
   token: Token!
   creator: User!
+  """
+  Launch venue, in the platform-wide V4TradeManager dexId space:
+  1 = Uniswap V3, 5 = SushiSwap V3. Launcher-v2 launches (pre multi-venue)
+  are all Uniswap V3 and indexed as 1.
+  """
+  venue: Int!
   pool: Bytes!
   positionId: BigInt!
   "The permanently locked LP position backing this token."

@@ -153,6 +153,198 @@ dataSources:
         - event: TokenLaunched(indexed address,indexed address,indexed address,uint256,uint256,int24,uint16,uint16,uint32,string,string,string,uint256,uint256)
           handler: handleTokenLaunched
       file: ./src/launcher.ts
+  # ---- Launchpad v3 (multi-venue: Uniswap V3 + SushiSwap V3) ---------------
+  # ignition/modules/LaunchpadV3.ts, deployed 2026-07-20 blocks
+  # 15112877..15113010 (ignition/deployments/launchpad-v3-robinhood).
+  # TokenLaunched gains `venueId` (uint8, V4TradeManager dexId space) and each
+  # venue has its OWN FeeLocker + V3FeeReceiver (locker/receiver immutables).
+  # The v2 datasources above stay for pre-v3 history + their lockers' ongoing
+  # fee collections.
+  - kind: ethereum
+    name: HoodLauncherV3
+    network: robinhood-mainnet
+    source:
+      address: "0x5e4121c262B846eb518EF3EADCD5566838AA841F"
+      abi: HoodLauncher
+      startBlock: 15112877
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - LauncherStats
+        - TokenLaunch
+        - TokenFeePolicy
+        - CreatorFeePolicy
+        - Token
+        - User
+      abis:
+        - name: HoodLauncher
+          file: ./abis/HoodLauncherV3.json
+        - name: HoodToken
+          file: ./abis/HoodToken.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: TokenLaunched(indexed address,indexed address,indexed address,uint8,uint256,uint256,int24,uint16,uint16,uint32,string,string,string,uint256,uint256)
+          handler: handleTokenLaunchedV3
+      file: ./src/launcher-v3.ts
+  - kind: ethereum
+    name: FeeLockerUni
+    network: robinhood-mainnet
+    source:
+      address: "0x45B96D2482E5cCaf143e49417E528250C23B6eC7"
+      abi: FeeLocker
+      startBlock: 15112933
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - FeeLockerStats
+        - LockedPosition
+        - FeeCollection
+        - Token
+        - User
+      abis:
+        - name: FeeLocker
+          file: ./abis/FeeLocker.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: PositionLocked(indexed uint256,indexed address,address,address,indexed address,uint16)
+          handler: handlePositionLocked
+        - event: FeesCollected(indexed uint256,indexed address,uint256,uint256)
+          handler: handleFeesCollected
+        - event: CreatorRecipientUpdated(indexed uint256,indexed address,indexed address)
+          handler: handleCreatorRecipientUpdated
+        - event: FeeReceiverUpdated(indexed address,indexed address)
+          handler: handleFeeReceiverUpdated
+      file: ./src/fee-locker.ts
+  - kind: ethereum
+    name: FeeLockerSushi
+    network: robinhood-mainnet
+    source:
+      address: "0xDAB52DF8Efd0F318200aB765B0e755Aae17766cD"
+      abi: FeeLocker
+      startBlock: 15112926
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - FeeLockerStats
+        - LockedPosition
+        - FeeCollection
+        - Token
+        - User
+      abis:
+        - name: FeeLocker
+          file: ./abis/FeeLocker.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: PositionLocked(indexed uint256,indexed address,address,address,indexed address,uint16)
+          handler: handlePositionLocked
+        - event: FeesCollected(indexed uint256,indexed address,uint256,uint256)
+          handler: handleFeesCollected
+        - event: CreatorRecipientUpdated(indexed uint256,indexed address,indexed address)
+          handler: handleCreatorRecipientUpdated
+        - event: FeeReceiverUpdated(indexed address,indexed address)
+          handler: handleFeeReceiverUpdated
+      file: ./src/fee-locker.ts
+  - kind: ethereum
+    name: UniFeeReceiver
+    network: robinhood-mainnet
+    source:
+      address: "0x7e601aA5E537711be897F7142dB2c4cbcE56B0DA"
+      abi: V3FeeReceiver
+      startBlock: 15112966
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - LockedPosition
+        - FeeDistribution
+        - FeeDelegation
+        - ClaimableFeeBalance
+        - Token
+        - User
+      abis:
+        - name: V3FeeReceiver
+          file: ./abis/V3FeeReceiver.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: FeesDistributed(indexed uint256,indexed address,indexed address,uint256,uint256)
+          handler: handleFeesDistributed
+        - event: FeesDelegated(indexed uint256,indexed address,indexed address,uint256)
+          handler: handleFeesDelegated
+        - event: FeeCredited(indexed address,indexed address,uint256)
+          handler: handleFeeCredited
+        - event: FeesClaimed(indexed address,indexed address,uint256)
+          handler: handleFeesClaimed
+      file: ./src/fee-receiver.ts
+  - kind: ethereum
+    name: SushiFeeReceiver
+    network: robinhood-mainnet
+    source:
+      address: "0xFE49833E45E8d031723bCd93bb37e9293229a1b4"
+      abi: V3FeeReceiver
+      startBlock: 15112959
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - LockedPosition
+        - FeeDistribution
+        - FeeDelegation
+        - ClaimableFeeBalance
+        - Token
+        - User
+      abis:
+        - name: V3FeeReceiver
+          file: ./abis/V3FeeReceiver.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: FeesDistributed(indexed uint256,indexed address,indexed address,uint256,uint256)
+          handler: handleFeesDistributed
+        - event: FeesDelegated(indexed uint256,indexed address,indexed address,uint256)
+          handler: handleFeesDelegated
+        - event: FeeCredited(indexed address,indexed address,uint256)
+          handler: handleFeeCredited
+        - event: FeesClaimed(indexed address,indexed address,uint256)
+          handler: handleFeesClaimed
+      file: ./src/fee-receiver.ts
+  # Venue-aware buy-burn (BuyBurnFeeModuleV2) — same events as v1.
+  - kind: ethereum
+    name: BuyBurnFeeModuleV2
+    network: robinhood-mainnet
+    source:
+      address: "0x9ecb32f91C698C468a4FA969270DF01A8Eae1c51"
+      abi: BuyBurnFeeModule
+      startBlock: 15112900
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - CreatorFeePolicy
+        - BuybackExecution
+      abis:
+        - name: BuyBurnFeeModule
+          file: ./abis/BuyBurnFeeModule.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: BuyBurnFeesAccrued(indexed address,uint256,uint256)
+          handler: handleBuyBurnFeesAccrued
+        - event: BuybackExecuted(indexed address,uint256,uint256,uint256,indexed address,bool)
+          handler: handleBuybackExecuted
+      file: ./src/buy-burn-module.ts
   # Token-side FeePolicyManager instance (feeAsset = the token itself).
   - kind: ethereum
     name: TokenFeeManager

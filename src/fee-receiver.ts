@@ -1,10 +1,27 @@
-import { Address, BigInt, Bytes } from '@graphprotocol/graph-ts'
-import { FeeCredited, FeesClaimed, FeesDelegated, FeesDistributed } from '../generated/V3FeeReceiver/V3FeeReceiver'
+import { Address, BigInt, Bytes, dataSource } from '@graphprotocol/graph-ts'
+import {
+  FeeCredited,
+  FeesClaimed,
+  FeesDelegated,
+  FeesDistributed,
+  V3FeeReceiver,
+} from '../generated/V3FeeReceiver/V3FeeReceiver'
 import { ClaimableFeeBalance, FeeDelegation, FeeDistribution, LockedPosition } from '../generated/schema'
+import { positionEntityId } from './fee-locker'
 import { getToken } from './helpers'
 
+/** LockedPosition ids are locker-scoped; each receiver serves exactly one
+ *  locker (immutable), so resolve it from the receiver we're indexing.
+ *  Returns '' when the locker() call reverts (loads of '' find nothing). */
+function receiverPositionId(tokenId: BigInt): string {
+  const receiver = V3FeeReceiver.bind(dataSource.address())
+  const locker = receiver.try_locker()
+  if (locker.reverted) return ''
+  return positionEntityId(locker.value, tokenId)
+}
+
 export function handleFeesDistributed(event: FeesDistributed): void {
-  const position = LockedPosition.load(event.params.tokenId.toString())
+  const position = LockedPosition.load(receiverPositionId(event.params.tokenId))
   if (position == null) return
 
   const token = getToken(event.params.token)
@@ -30,7 +47,7 @@ export function handleFeesDistributed(event: FeesDistributed): void {
 }
 
 export function handleFeesDelegated(event: FeesDelegated): void {
-  const position = LockedPosition.load(event.params.tokenId.toString())
+  const position = LockedPosition.load(receiverPositionId(event.params.tokenId))
   if (position == null) return
 
   // `asset` is the launched token (token-side policy) or WETH (creator side).

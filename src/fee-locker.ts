@@ -1,4 +1,4 @@
-import { BigInt, Bytes } from '@graphprotocol/graph-ts'
+import { Address, BigInt, Bytes, dataSource } from '@graphprotocol/graph-ts'
 import {
   CreatorRecipientUpdated,
   FeesCollected,
@@ -8,7 +8,14 @@ import {
 import { FeeCollection, FeeLockerStats, LockedPosition } from '../generated/schema'
 import { getToken, getUser } from './helpers'
 
+// Global counters across ALL lockers (legacy v2 + one per launcher-v3 venue).
 const STATS_ID = 'fee-locker'
+
+/** LockedPosition ids are locker-scoped — each venue has its own FeeLocker +
+ *  position manager, and NFT ids collide across position managers. */
+export function positionEntityId(locker: Address, tokenId: BigInt): string {
+  return locker.toHexString() + '-' + tokenId.toString()
+}
 
 function getStats(): FeeLockerStats {
   let stats = FeeLockerStats.load(STATS_ID)
@@ -26,7 +33,9 @@ export function handlePositionLocked(event: PositionLocked): void {
   const token1 = getToken(event.params.token1)
   const creator = getUser(event.params.creator)
 
-  const position = new LockedPosition(event.params.tokenId.toString())
+  const position = new LockedPosition(positionEntityId(dataSource.address(), event.params.tokenId))
+  position.locker = dataSource.address()
+  position.positionId = event.params.tokenId
   position.pool = event.params.pool
   position.token0 = token0.id
   position.token1 = token1.id
@@ -52,7 +61,7 @@ export function handlePositionLocked(event: PositionLocked): void {
 }
 
 export function handleFeesCollected(event: FeesCollected): void {
-  const position = LockedPosition.load(event.params.tokenId.toString())
+  const position = LockedPosition.load(positionEntityId(dataSource.address(), event.params.tokenId))
   if (position == null) return
 
   position.collectCount += 1
@@ -75,7 +84,7 @@ export function handleFeesCollected(event: FeesCollected): void {
 }
 
 export function handleCreatorRecipientUpdated(event: CreatorRecipientUpdated): void {
-  const position = LockedPosition.load(event.params.tokenId.toString())
+  const position = LockedPosition.load(positionEntityId(dataSource.address(), event.params.tokenId))
   if (position == null) return
 
   position.creator = getUser(event.params.newCreator).id

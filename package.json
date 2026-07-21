@@ -6,7 +6,7 @@
   "scripts": {
     "codegen": "graph codegen",
     "build": "graph build",
-    "deploy:goldsky": "goldsky subgraph deploy hooddev/1.5.0 --path ."
+    "deploy:goldsky": "goldsky subgraph deploy hooddev/2.0.0 --path ."
   },
   "devDependencies": {
     "@graphprotocol/graph-cli": "^0.88.0",
