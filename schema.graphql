@@ -431,6 +431,30 @@ type TokenLaunch @entity {
   mcapGrowth: BigDecimal!
   "Timestamp of the launch pool's last swap; 0 until the first trade."
   lastTradeAt: BigInt!
+
+  # ---- bonding progress (derived from price; see README "Bonding") --------
+  # The launch position IS a bonding curve: the entire supply, single-sided
+  # over [startTick, MAX_TICK], so the WETH accumulated inside it is a closed
+  # form of the current price. These fields make that legible and sortable.
+  """
+  ETH sitting in the launch position right now — how far the curve has filled.
+  A FACT, no policy: `initialMcapEth × (√mcapGrowth − 1)`, clamped at 0.
+  Falls when price falls, exactly like a pump.fun progress bar.
+  """
+  bondedEth: BigDecimal!
+  """
+  The bond goal, stamped at launch: `max(5 ETH, initialMcapEth × (√3 − 1))`.
+  POLICY, not fact — the flat target keeps "bonded" comparable across tokens,
+  the √3 floor stops a high-FDV launch from opening pre-bonded. Re-render from
+  `bondedEth` if the constants change rather than waiting for a resync.
+  """
+  bondTargetEth: BigDecimal!
+  "bondedEth / bondTargetEth, capped at 1. The progress bar."
+  bondProgress: BigDecimal!
+  "Latched: true once bondProgress first reaches 1, never false again."
+  hasBonded: Boolean!
+  "When it first bonded; null until then."
+  bondedAt: BigInt
   "Lifetime swap totals on the launch pool."
   poolTxCount: Int!
   poolBuys: Int!

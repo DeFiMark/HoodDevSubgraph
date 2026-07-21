@@ -37,6 +37,37 @@ export function priceEthFromStartTick(tick: i32): BigDecimal {
   return bigDecimalPow(TICK_BASE, tick)
 }
 
+/**
+ * √(opening price) — the other half of the bonding math, computed EXACTLY as
+ * 1.0001^(startTick/2) rather than by taking a square root (BigDecimal has no
+ * sqrt, and going through f64 would bleed precision into a number we display).
+ *
+ * The halving is lossless because HoodLauncher rejects any tick that isn't a
+ * multiple of TICK_SPACING = 200 (`_validate` → `InvalidTick`), so startTick/2
+ * is always a whole multiple of 100. Do not relax that check without revisiting
+ * this.
+ */
+export function sqrtPriceEthFromStartTick(tick: i32): BigDecimal {
+  return bigDecimalPow(TICK_BASE, tick / 2)
+}
+
+/**
+ * The bond goal, in ETH. Flat for the launches everyone actually does, with a
+ * floor tied to the opening FDV so a token launched near the top of the
+ * launcher's FDV band can't open already-bonded.
+ *
+ * Both are POLICY. `bondedEth` is the underlying fact — re-derive progress off
+ * that if these move, rather than paying for a resync.
+ */
+const BOND_TARGET_ETH = BigDecimal.fromString('5')
+/** √3 − 1: the floor makes bonding mean "≥3x from launch" as well as "≥5 ETH in". */
+const BOND_MIN_MULTIPLE_TERM = BigDecimal.fromString('0.732050807568877293527446341505872')
+
+export function bondTargetEthFor(initialMcapEth: BigDecimal): BigDecimal {
+  const floor = initialMcapEth.times(BOND_MIN_MULTIPLE_TERM)
+  return floor.gt(BOND_TARGET_ETH) ? floor : BOND_TARGET_ETH
+}
+
 /** `supply` (18-dec base units) as whole tokens. */
 export function supplyTokens(supply: BigInt): BigDecimal {
   return supply.toBigDecimal().div(E18)
@@ -65,6 +96,33 @@ export function handleLaunchPoolSwap(event: Swap): void {
   launch.mcapGrowth = launch.initialMcapEth.equals(ZERO_BD)
     ? ZERO_BD
     : launch.currentMcapEth.div(launch.initialMcapEth)
+
+  // ---- bonding progress --------------------------------------------------
+  // The launch position holds the ENTIRE supply single-sided over
+  // [startTick, MAX_TICK], so it IS a bonding curve and the WETH inside it is
+  // a closed form of price — no volume accounting, no pool balance read:
+  //
+  //   L      = supply · √P₀            (the upper bound is ~24 orders of
+  //                                     magnitude away, so its term vanishes)
+  //   weth   = L · (√P − √P₀)
+  //
+  // and the pool already handed us √P as sqrtPriceX96, so this is exact.
+  // Note it tracks price BOTH ways: sells pull ETH back out and the bar drops.
+  const sqrtP0 = sqrtPriceEthFromStartTick(launch.startTick)
+  const sqrtP = launch.tokenIsToken0 ? sqrt : sqrt.equals(ZERO_BD) ? ZERO_BD : ONE_BD.div(sqrt)
+  const bonded = supplyTokens(launch.supply).times(sqrtP0).times(sqrtP.minus(sqrtP0))
+  launch.bondedEth = bonded.gt(ZERO_BD) ? bonded : ZERO_BD
+
+  const progress = launch.bondTargetEth.equals(ZERO_BD)
+    ? ZERO_BD
+    : launch.bondedEth.div(launch.bondTargetEth)
+  launch.bondProgress = progress.gt(ONE_BD) ? ONE_BD : progress
+  // Latch on the UNCLAMPED value, and only once — bondedAt is the moment it
+  // first crossed, not the last time it was above water.
+  if (!launch.hasBonded && progress.ge(ONE_BD)) {
+    launch.hasBonded = true
+    launch.bondedAt = event.block.timestamp
+  }
 
   // Volume counts the ETH side; a "buy" is the pool paying out the token
   // (its token-side amount is negative).

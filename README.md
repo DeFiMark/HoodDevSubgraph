@@ -43,6 +43,97 @@ The launchpad UI reads `TokenLaunch` for the token list/pages: metadata
 earnings), sniper-guard settings, and dev-buy amounts. `LauncherStats`
 (id `"launcher"`) counts launches.
 
+## Bonding progress (`bondedEth` / `bondTargetEth` / `hasBonded`)
+
+Every other launchpad sells into a bonding curve and then "graduates" to a DEX.
+We open on the DEX, so there was no goal to grind toward — these fields add one,
+**without inventing anything**: the launch position already *is* a bonding curve.
+
+`HoodLauncher._createPoolAndLock` mints the ENTIRE supply as one single-sided
+position over `[startTick, MAX_USABLE_TICK]` with zero WETH in. Buyers walk the
+price up that range and their ETH piles up inside the position — which means the
+ETH in the curve is a closed form of the current price alone. No volume
+accounting, no balance reads, no new events:
+
+```
+L         = supply · √P₀        (the upper bound is ~24 orders of magnitude
+                                 away, so its term drops out entirely)
+bondedEth = L · (√P − √P₀)
+          = initialMcapEth · (√mcapGrowth − 1)
+```
+
+The mapping never actually takes a square root: the pool hands us `√P` directly
+as `sqrtPriceX96`, and `√P₀ = 1.0001^(startTick/2)` is exact because
+`HoodLauncher` rejects any tick that isn't a multiple of `TICK_SPACING = 200`.
+**Don't relax that check without revisiting `sqrtPriceEthFromStartTick`.**
+
+Verified against mainnet: across 12 launches on both venues, the formula
+reproduced each pool's real WETH balance to within 0–0.011 ETH, always positive
+and always <0.04% of volume — i.e. the residual is just uncollected 1% LP fees.
+
+### Fact vs. policy
+
+| Field | |
+|---|---|
+| `bondedEth` | **Fact.** ETH in the curve right now. Falls when price falls. |
+| `bondTargetEth` | **Policy.** `max(5 ETH, initialMcapEth × (√3 − 1))`, stamped at launch. |
+| `bondProgress` | `bondedEth / bondTargetEth`, capped at 1. |
+| `hasBonded` | **Latched** — true once progress first hits 1, never false again. |
+| `bondedAt` | Timestamp of that first crossing; null until then. |
+
+The flat 5 ETH keeps "bonded" meaning the same thing across tokens — real,
+permanently locked, exit-able depth. The `√3` floor (≥3x from launch) stops a
+token launched near the top of the launcher's FDV band from opening
+already-bonded. From a typical ~2.1 ETH opening FDV that's ~11x, bonding at
+~24 ETH FDV with ~5 ETH locked; pump.fun graduates at ~$69k with ~$12k. Same
+ballpark, arrived at honestly.
+
+Both constants live in `src/launch-pool.ts`. **Changing them requires a redeploy
+and full resync**, so if you need to re-tune in a hurry, re-derive progress off
+`bondedEth` in the backend and let the stored fields catch up on the next
+deploy — that's why `bondedEth` is stored raw and policy-free.
+
+### Querying
+
+```graphql
+# "About to bond" rail
+tokenLaunches(where: { hasBonded: false, bondProgress_gte: "0.6" },
+              orderBy: bondProgress, orderDirection: desc) { id bondedEth bondTargetEth bondProgress }
+
+# Bonded badge / filter
+tokenLaunches(where: { hasBonded: true }, orderBy: bondedAt, orderDirection: desc) { id bondedAt }
+```
+
+For the terminal's dotted bond line, the price to draw it at is the inverse —
+no extra field needed, it's a pure function of two values you already query:
+
+```
+bondPriceEth = lastPriceEth × ((1 + bondTargetEth / initialMcapEth)² / mcapGrowth)
+# or straight from the launch:  P_bond = initialMcapEth × (1 + bondTargetEth/initialMcapEth)² / supply
+```
+
+### Gotchas
+
+- **Dev buys are already included.** The atomic dev buy's `Swap` fires in the
+  launch tx *before* `TokenLaunched`, but graph-node replays the block against
+  the `LaunchPool` template created in that handler, so it lands through the
+  normal swap path. Confirmed on prod (curve fill reconciles with `volumeEth`
+  net of the 1% pool fee). Do not "fix" this by seeding from `devBuyEth` — you
+  would double count.
+- **Dev buys do NOT appear in `Trade`.** Unrelated mechanism: `Trade` rows come
+  only from `TradeExecuted` on the TradeManagers, and `_devBuy` calls the venue
+  router directly. Synthesizing one would pollute `TraderStats` / PnL, so it's
+  deliberately left out.
+- `bondProgress` is **not** monotonic — it drops on sells, same as pump.fun.
+  `hasBonded` is the monotonic one; use it for badges.
+- **`hasBonded` latches on the PEAK, `bondProgress` shows the present.** They
+  disagree constantly and that is correct — a token can be `hasBonded: true` at
+  20% progress. Don't compute "how many have bonded" by filtering on
+  `bondProgress`; you'll undercount badly. Measured on the first 28 launches:
+  1 was above target at that instant, **3 had crossed it at some point** — and
+  the latch catches all 3 on resync, because graph-node replays every swap.
+  A UI showing only live progress would silently lose two thirds of them.
+
 ## What the terminal UI queries (V1TradeManager)
 
 - `Trade` rows (`User.trades`, ordered by timestamp) — Your Trade History.

@@ -5,7 +5,7 @@ import { CreatorFeePolicy, LauncherStats, LockedPosition, TokenFeePolicy, TokenL
 import { HoodToken as HoodTokenTemplate, LaunchPool as LaunchPoolTemplate } from '../generated/templates'
 import { positionEntityId } from './fee-locker'
 import { getToken, getUser } from './helpers'
-import { ONE_BD, ZERO_BD, priceEthFromStartTick, supplyTokens } from './launch-pool'
+import { ONE_BD, ZERO_BD, bondTargetEthFor, priceEthFromStartTick, supplyTokens } from './launch-pool'
 
 const STATS_ID = 'launcher'
 
@@ -76,6 +76,18 @@ export function processTokenLaunch(
   launch.poolBuys = 0
   launch.poolSells = 0
   launch.volumeEth = ZERO_BD
+
+  // Bonding seed. The pool opens at exactly startTick with zero WETH in the
+  // position, so the curve starts empty by construction. An atomic dev buy is
+  // NOT special-cased: its Swap fires in this same tx and graph-node replays
+  // the block against the LaunchPool template created below, so the dev buy
+  // lands through the normal swap path a moment from now. (Verified against
+  // prod — the curve fill reconciles with volumeEth net of the 1% pool fee.)
+  launch.bondedEth = ZERO_BD
+  launch.bondTargetEth = bondTargetEthFor(launch.initialMcapEth)
+  launch.bondProgress = ZERO_BD
+  launch.hasBonded = false
+  launch.bondedAt = null
 
   // PositionLocked (the venue's FeeLocker) logs before TokenLaunched in the
   // same tx; LockedPosition ids are locker-scoped.
